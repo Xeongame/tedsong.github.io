@@ -7,10 +7,11 @@
 
 let currentBack = 0;
 let sizeX = 800, sizeY = 500;
+let horizon = 400;
 let sceneConfig = [ // assign different scene settings through dictionary
   {
     id:0,
-    backColor:[152, 224, 250],
+    backColor:[150, 170, 255],
     terrainColor1:[225],
     terrainColor2:[235],
     terrainColor3:[248],
@@ -29,16 +30,31 @@ function setup() {
 function draw() {
   let config = sceneConfig[currentBack]; //gets settings
   background(220);
-  noStroke();
   
   fill(config.backColor); //background
   rect(0, 0, sizeX, sizeY); 
 
   
+
+  fill(230, 227, 200) //moon
+  stroke(222, 215, 196)
+  circle(mouseX, sizeY - mouseY + horizon/2, sizeX/8) //mirror y pos from the horizon
+  fill(config.backColor);
+  noStroke()
+  circle(mouseX - sizeX/26, sizeY - mouseY - sizeX/26 + horizon/2, sizeX/8)
+
+  strokeWeight(2); //sun at the mouse pos
+  fill(255, 239, 0)
+  stroke(255, 220, 0);
+  circle(mouseX, mouseY, sizeX/8)
+
   fill(config.terrainColor1) //terrain
+  noStroke();
   ellipse(sizeX - 250, sizeY + 100, 1500, 600)
   fill(config.terrainColor2)
-  ellipse(sizeX - 500, sizeY + 90, 1000, 600)
+  ellipse(sizeX - 500, sizeY + 80, 1000, 600)
   fill(config.terrainColor3)
   ellipse(sizeX - 200, sizeY + 180, 700, 600)
+
+  print(mouseY)
 };
