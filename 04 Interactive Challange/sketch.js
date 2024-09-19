@@ -91,9 +91,8 @@ function draw() {
   fill(config.terrainColor3);
   ellipse(sizeX - 200, sizeY + 180, 700, 600);
 
-  fill(0) //
+  fill(0) //artist mark
   text("Ted Song", sizeX -  60, sizeY - 10) 
-  //print(mouseX, mouseY)
 };
 
 function keyPressed(){
@@ -113,12 +112,10 @@ function keyPressed(){
 
 function mouseClicked(){
   if (mouseButton === CENTER || mouseButton === LEFT){
-    currentBack += 1
+    currentBack += 1 //changes background when mouse is clicked
 
     if (currentBack === 4) {
-      currentBack = 0
+      currentBack = 0 //resets background
     }
   };
-
-  print(mouseButton, currentBack)
 };
