@@ -13,35 +13,40 @@ let horizon = 480;
 let sceneConfig = [ // assign different scene settings through dictionary
   {
     id:0,
-    backColor:[150, 170, 255],
+    backColor:[129, 169, 218],
     terrainColor1:[225],
     terrainColor2:[235],
     terrainColor3:[248],
-    hillColor:[250], 
+    hillColor1:[200], 
+    hillColor2:[250], 
   },
   {
     id:1,
-    backColor:[150, 170, 255],
+    backColor:[119, 142, 154],
     terrainColor1:[225],
     terrainColor2:[235],
     terrainColor3:[248],
-    hillColor:[250], 
+    hillColor1:[200], 
+    hillColor2:[250], 
   },
   {
     id:2,
-    backColor:[150, 170, 255],
-    terrainColor1:[225],
-    terrainColor2:[235],
-    terrainColor3:[248],
-    hillColor:[250], 
+    backColor:[100, 170, 255],
+    terrainColor1:[20, 185, 80],
+    terrainColor2:[50, 200, 100],
+    terrainColor3:[70, 228, 120],
+    hillColor1:[0, 190, 120], 
+    hillColor2:[100, 210, 100],
+    
   },
   {
     id:3,
-    backColor:[150, 170, 255],
-    terrainColor1:[225],
-    terrainColor2:[235],
-    terrainColor3:[248],
-    hillColor:[250], 
+    backColor:[220, 40, 40],
+    terrainColor1:[70],
+    terrainColor2:[100, 105, 105],
+    terrainColor3:[135],
+    hillColor1:[20], 
+    hillColor2:[250],  
   },
 ];
 
@@ -52,7 +57,6 @@ function setup() {
 
 function draw() {
   let config = sceneConfig[currentBack]; //gets settings
-  let backColor = config.backColor
   background(220);
   
   fill(config.backColor); //background
@@ -71,11 +75,11 @@ function draw() {
   stroke(255, 220, 0);
   circle(mouseX, mouseY, sunSize * sunSizeMultiplier); //scales with size variable
 
-  fill(config.hillColor - 50); //hills
+  fill(config.hillColor1); //hills
   noStroke();
   triangle(410, 310, 531, 118, 658, 311);
   triangle(690, 320, 740, 235, 785, 321);
-  fill(config.hillColor);
+  fill(config.hillColor2);
   triangle(690, 320, 740, 235, 755, 320);
   triangle(400, 310, 531, 118, 608, 311);
 
@@ -87,6 +91,8 @@ function draw() {
   fill(config.terrainColor3);
   ellipse(sizeX - 200, sizeY + 180, 700, 600);
 
+  fill(0) //
+  text("Ted Song", sizeX -  60, sizeY - 10) 
   //print(mouseX, mouseY)
 };
 
