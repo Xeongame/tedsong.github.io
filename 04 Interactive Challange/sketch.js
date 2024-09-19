@@ -3,7 +3,10 @@
 // 9/16/2024
 //
 // Extra for Experts:
-// - describe what you did to take this project "above and beyond"
+// - used arrays for background customization
+// - movable prop with advanced movement calculation (mirrored sun/moon)
+// - prop position affects background color (simulates sunset/sunrise)
+
 
 let currentBack = 0;
 let sizeX = 800, sizeY = 500;
@@ -57,16 +60,19 @@ function setup() {
 
 function draw() {
   let config = sceneConfig[currentBack]; //gets settings
+  let backColor = config.backColor;
+  let distFromHorizon = Math.min(Math.max(mouseY - horizon/2, -10), 100); //finds distance from horizon and clamps it between -20 to 100
+  let newBackColor = [backColor[0] - distFromHorizon, backColor[1] - distFromHorizon, backColor[2] - distFromHorizon]; //changes background shade to simulate nightfall
   background(220);
   
-  fill(config.backColor); //background
+  fill(newBackColor); //background
   rect(0, 0, sizeX, sizeY); 
 
   fill(250, 247, 140); //moon
   stroke(255, 255, 200);
-  strokeWeight(2)
+  strokeWeight(2);
   circle(mouseX, sizeY - mouseY + horizon/2, sunSize * sunSizeMultiplier); //mirrors y pos from the horizon and scaling with size variable
-  fill(config.backColor);
+  fill(newBackColor);
   noStroke();
   circle(mouseX - (sunSize/5 * sunSizeMultiplier), sizeY - mouseY - (sunSize/5 * sunSizeMultiplier) + horizon/2, sunSize * sunSizeMultiplier); //creates a new circle to blend with background to give the moon the crescent shape
 
@@ -91,8 +97,8 @@ function draw() {
   fill(config.terrainColor3);
   ellipse(sizeX - 200, sizeY + 180, 700, 600);
 
-  fill(0) //artist mark
-  text("Ted Song", sizeX -  60, sizeY - 10) 
+  fill(0); //artist mark
+  text("Ted Song", sizeX -  60, sizeY - 10);
 };
 
 function keyPressed(){
@@ -112,10 +118,10 @@ function keyPressed(){
 
 function mouseClicked(){
   if (mouseButton === CENTER || mouseButton === LEFT){
-    currentBack += 1 //changes background when mouse is clicked
+    currentBack += 1; //changes background when mouse is clicked
 
     if (currentBack === 4) {
-      currentBack = 0 //resets background
+      currentBack = 0; //resets background
     }
   };
 };
