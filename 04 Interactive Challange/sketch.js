@@ -9,8 +9,8 @@
 
 
 let currentBack = 0;
-let sizeX = 800, sizeY = 500;
-let sunSize = sizeX/8;
+let backSizeX = 800, backSizeY = 500;
+let sunSize = backSizeX/8;
 let sunSizeMultiplier = 1;
 let horizon = 480;
 let sceneConfig = [ // assign different scene settings through dictionary
@@ -53,33 +53,43 @@ let sceneConfig = [ // assign different scene settings through dictionary
   },
 ];
 
+let sunGlassesDistX = 22;
+let sunGlassesDistY = 4;
+let sunGlassesSizeX = 30;
+let sunGlassesSizeY = 20;
 
 function setup() {
-  createCanvas(sizeX, sizeY);
+  createCanvas(backSizeX, backSizeY);
 };
 
 function draw() {
   let config = sceneConfig[currentBack]; //gets settings
   let backColor = config.backColor;
-  let distFromHorizon = Math.min(Math.max(mouseY - horizon/2, -10), 100); //finds distance from horizon and clamps it between -20 to 100
+  let distFromHorizon = Math.min(Math.max(mouseY - horizon/2, 0), 100); //finds distance from horizon and clamps it between 0 to 100
   let newBackColor = [backColor[0] - distFromHorizon, backColor[1] - distFromHorizon, backColor[2] - distFromHorizon]; //changes background shade to simulate nightfall
   background(220);
   
   fill(newBackColor); //background
-  rect(0, 0, sizeX, sizeY); 
+  rect(0, 0, backSizeX, backSizeY); 
 
   fill(250, 247, 140); //moon
   stroke(255, 255, 200);
   strokeWeight(2);
-  circle(mouseX, sizeY - mouseY + horizon/2, sunSize * sunSizeMultiplier); //mirrors y pos from the horizon and scaling with size variable
+  circle(mouseX, backSizeY - mouseY + horizon/2, sunSize * sunSizeMultiplier); //mirrors y pos from the horizon and scaling with size variable
   fill(newBackColor);
   noStroke();
-  circle(mouseX - (sunSize/5 * sunSizeMultiplier), sizeY - mouseY - (sunSize/5 * sunSizeMultiplier) + horizon/2, sunSize * sunSizeMultiplier); //creates a new circle to blend with background to give the moon the crescent shape
+  circle(mouseX - (sunSize/5 * sunSizeMultiplier), backSizeY - mouseY - (sunSize/5 * sunSizeMultiplier) + horizon/2, sunSize * sunSizeMultiplier); //creates a new circle to blend with background to give the moon the crescent shape
 
   strokeWeight(2); //sun at the mouse pos
   fill(255, 239, 0);
   stroke(255, 220, 0);
   circle(mouseX, mouseY, sunSize * sunSizeMultiplier); //scales with size variable
+  fill(0)
+  noStroke()
+
+  ellipse(mouseX - sunGlassesDistX * sunSizeMultiplier, mouseY - sunGlassesDistY * sunSizeMultiplier, sunGlassesSizeX * sunSizeMultiplier, sunGlassesSizeY * sunSizeMultiplier);// creates sun glasses and scales based on sunSizeMultiplier
+  ellipse(mouseX + sunGlassesDistX  * sunSizeMultiplier, mouseY - sunGlassesDistY * sunSizeMultiplier, sunGlassesSizeX * sunSizeMultiplier, sunGlassesSizeY * sunSizeMultiplier);
+  rect(mouseX - sunGlassesDistX  * sunSizeMultiplier, mouseY - sunGlassesDistY * 2 * sunSizeMultiplier, sunGlassesSizeX * 1.5 * sunSizeMultiplier, sunGlassesSizeY/10 * sunSizeMultiplier)
 
   fill(config.hillColor1); //hills
   noStroke();
@@ -91,14 +101,14 @@ function draw() {
 
   fill(config.terrainColor1); //terrain
   noStroke();
-  ellipse(sizeX - 250, sizeY + 100, 1500, 600);
+  ellipse(backSizeX - 250, backSizeY + 100, 1500, 600);
   fill(config.terrainColor2);
-  ellipse(sizeX - 550, sizeY + 80, 1100, 600);
+  ellipse(backSizeX - 550, backSizeY + 80, 1100, 600);
   fill(config.terrainColor3);
-  ellipse(sizeX - 200, sizeY + 180, 700, 600);
+  ellipse(backSizeX - 200, backSizeY + 180, 700, 600);
 
   fill(0); //artist mark
-  text("Ted Song", sizeX -  60, sizeY - 10);
+  text("Ted Song", backSizeX -  60, backSizeY - 10);
 };
 
 function keyPressed(){
