@@ -4,6 +4,7 @@
 //
 // Extra for Experts:
 // - detects key holds for smoother change in rect width
+// 
 
 let rectWidth = 20; //width of each rectangle in pixels that make up the terrain
 let framesElapsed = 0; //total time the program has ran in frames
