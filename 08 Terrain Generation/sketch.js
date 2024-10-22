@@ -6,19 +6,19 @@
 // - detects key holds for smoother change in rect width
 // 
 
-let rectWidth = 20; //width of each rectangle in pixels that make up the terrain
+let rectWidth = 1; //width of each rectangle in pixels that make up the terrain
 let framesElapsed = 0; //total time the program has ran in frames
-let noiseMultiplier = 1.5; //controls the intensity of noise: higher = rougher terrain, lower = smoother terrain
 let timeRatio = -0.01; //affects the speed and direction of terrain panning
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
-  
+  frameRate(60)
 }
 
 function draw() {
   background(220);
   drawTerrain();
+  
 }
 
 function drawTerrain() {
@@ -41,10 +41,10 @@ function drawTerrain() {
     rectWidth = width/10;
   }
 
+  let count = 0
   for (let x = 0; x < maxRect; x += 1) { //loop through the found number of segments
-    let ratio = x/maxRect;
-    let rectX = ratio * width; //x pos
-    let rectY = noise(ratio * noiseMultiplier + framesElapsed * timeRatio) * maxHeight; //y pos
+    let rectX = x/maxRect * width; //x pos
+    let rectY = noise(count/100 + (framesElapsed * timeRatio)) * maxHeight; //y pos
 
     fill(255, 255, 255);
     stroke(0, 0, 0);
@@ -56,6 +56,7 @@ function drawTerrain() {
       peakX = rectX + rectWidth/2; //find the midpoint of the tallest rect as the base of the flag
     }
 
+    count +=1
     totalHeight += rectY; //adds each rect height to total
   }
 
@@ -64,9 +65,9 @@ function drawTerrain() {
   strokeWeight(5);
   line(0, height-averageHeight, width, height-averageHeight); //draw a line to show the average height
 
-  print(totalHeight, maxRect, peakY)
   framesElapsed += 1; //counts every frame
   drawFlag(peakX, peakY);
+  print(count)
 }
 
 function drawFlag(x, y) {
