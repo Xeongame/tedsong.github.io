@@ -16,15 +16,15 @@ function setup() {
   rectMode(CENTER);
   
   
-  for (let i = 0; i < 20; i ++) { //westbound
+  for (let i = 0; i < 20; i ++) { //create westbound car objects
     westbound[i] = new Vehicle(-1, Math.round(random(1)));
   }
 
-  for (let i = 0; i < 20; i ++) { //eastbound
+  for (let i = 0; i < 20; i ++) { //create eastbound car objects
     eastbound[i] = new Vehicle(1, Math.round(random(1)));
   }
 
-  light = new TrafficLight();
+  light = new TrafficLight(); //create traffic light object
 }
 
 function draw() {
@@ -34,16 +34,16 @@ function draw() {
   rect(width/2, height/2, width, roadHeight);
 
   fill(255);
-  let count = 20;
+  let count = 20; //draw the road
   for (let i = 0; i < count; i ++){
     rect(width/(count*2) + i * width/count, height/2, width/(count*2), 6);
   }
 
-  for (let i = 0; i < eastbound.length; i ++) {
+  for (let i = 0; i < eastbound.length; i ++) { //move the east caras
     eastbound[i].action();
   }
 
-  for (let i = 0; i < westbound.length; i ++) {
+  for (let i = 0; i < westbound.length; i ++) { //move the west cars
     westbound[i].action();
   }
 
@@ -65,11 +65,11 @@ class Vehicle{
     this.speed = random(5, 15);
     this.dir = dir;
 
-    if (dir === -1){ //west
+    if (dir === -1){ //west cars
       this.x = width;
       this.y = random(height/2 - roadHeight/2 + edge, height/2 - edge);
     } 
-    else { //east
+    else { //east cars
       this.x = 0;
       this.y = random(height/2 + edge, height/2 + roadHeight/2 - edge);
     }
@@ -107,7 +107,7 @@ class Vehicle{
       this.speed = 15;
     }
 
-    this.x = Math.round(this.x + this.speed * this.dir);
+    this.x += this.speed * this.dir;
 
     if (this.dir === -1 && this.x < -50){ //resets car x when it goes out of bound
       this.x = width + 50;
@@ -167,7 +167,7 @@ class TrafficLight{
   }
 }
 
-function mouseClicked(){
+function mouseClicked(){ //add new cars when mouse is clicked
   if (keyIsDown(SHIFT)){
     westbound.push(new Vehicle(-1, Math.round(random(1))));
   } 
