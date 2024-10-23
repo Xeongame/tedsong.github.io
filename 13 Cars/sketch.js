@@ -30,14 +30,7 @@ function setup() {
 function draw() {
   background(220);
 
-  fill(0);
-  rect(width/2, height/2, width, roadHeight);
-
-  fill(255);
-  let count = 20; //draw the road
-  for (let i = 0; i < count; i ++){
-    rect(width/(count*2) + i * width/count, height/2, width/(count*2), 6);
-  }
+  drawRoad();
 
   for (let i = 0; i < eastbound.length; i ++) { //move the east caras
     eastbound[i].action();
@@ -55,6 +48,17 @@ function draw() {
     if (light.timer <= 0){ //changes light back to green once countdown is over
       light.mode = "green";
     }
+  }
+}
+
+function drawRoad(){
+  fill(0);
+  rect(width/2, height/2, width, roadHeight);
+
+  fill(255);
+  let count = 20; //draw the road
+  for (let i = 0; i < count; i ++){
+    rect(width/(count*2) + i * width/count, height/2, width/(count*2), 6);
   }
 }
 
