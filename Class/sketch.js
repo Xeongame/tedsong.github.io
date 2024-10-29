@@ -6,7 +6,12 @@
 // - describe what you did to take this project "above and beyond"
 
 let c1, c2, c3
-let points = []
+let points = [];
+let grid = [
+  [0, 255, 200, 150, 100, 50],
+  [255, 200, 150, 100, 50, 0],
+  [0, 50, 100, 150, 100, 50, 0],
+];
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -44,6 +49,10 @@ class test{
   func(){
 
   }
+}
+
+function mouseClicked(){
+  print(mouseX, mouseY)
 }
 
 class point{
