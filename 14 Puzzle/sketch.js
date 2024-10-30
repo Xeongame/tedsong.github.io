@@ -1,17 +1,20 @@
-//Insert your Comment Header here.
+// Terrain Generation 
+// Ted Song
+// 10/30/2024
+// CS 30
 
-let NUM_ROWS = 4;
-let NUM_COLS = 5;
+let NUM_ROWS = 3;
+let NUM_COLS = 3;
 let rectWidth, rectHeight;
 let currentRow, currentCol;
-let gameWon = false;
-let fillMode = "cross";
+let gameWon = false; //global variable for ending the game
+let fillMode = "cross"; //fills either in a square shape or cross shape
 let gridData = [[0,0,0,0,0],
                 [0,0,0,0,0],
                 [0,255,0,0,0],
                 [255,255,255,0,0]];
 
-let overlayData = [[1,0,0,0,0],
+let overlayData = [[1,0,0,0,0], //separate data array for overlay squares
                    [0,0,0,0,0],
                    [0,0,0,0,0],
                    [0,0,0,0,0]];
@@ -21,7 +24,7 @@ function setup() {
   createCanvas(windowWidth, windowHeight);
   rectWidth = width/NUM_COLS;
   rectHeight = height/NUM_ROWS;
-  randomize(); //randomize the square colors
+  randomize(); //randomize the square colors at the very start
 }
 
 function draw() {
@@ -48,12 +51,12 @@ function mousePressed(){
 
   if (keyIsDown(SHIFT)) return; //shift click flips only the clicked square
 
-  if (fillMode === "cross") {
+  if (fillMode === "cross") { //cross shaped
     flip(currentCol + 1, currentRow);
     flip(currentCol - 1, currentRow);
     flip(currentCol, currentRow + 1);
     flip(currentCol, currentRow - 1);
-  } else {
+  } else { //square shaped
     flip(currentCol + 1, currentRow);
     flip(currentCol, currentRow + 1);
     flip(currentCol + 1, currentRow + 1);
@@ -61,7 +64,7 @@ function mousePressed(){
 }
 
 function keyPressed(){
-  if (key === " "){
+  if (key === " "){ //changes mode when space is pressed
     if (fillMode === "cross"){
       fillMode = "square"
     } else {
@@ -70,8 +73,8 @@ function keyPressed(){
   }
 }
 
-function changeOverlay(col, row){
-  if (col >= 0 && col < NUM_COLS ){
+function changeOverlay(col, row){ 
+  if (col >= 0 && col < NUM_COLS ){ //sets the square data at given row and column to 1 to be rendered later
     if (row >= 0 && row < NUM_ROWS){
       overlayData[row][col] = 1;
     }
@@ -79,26 +82,26 @@ function changeOverlay(col, row){
 }
 
 function drawOverlay(){  
-  for (let x = 0; x < NUM_COLS ; x++){
+  for (let x = 0; x < NUM_COLS ; x++){ //resets all overlay data 
     for (let y = 0; y < NUM_ROWS; y++){
       overlayData[y][x] = 0;
     }
   }
 
-  changeOverlay(currentCol, currentRow);
-  if (fillMode === "cross") {
+  changeOverlay(currentCol, currentRow); //determines the active overlay squares based on fill mode and mouse location
+  if (fillMode === "cross") { //cross 
     changeOverlay(currentCol + 1, currentRow);
     changeOverlay(currentCol - 1, currentRow);
     changeOverlay(currentCol, currentRow + 1);
     changeOverlay(currentCol, currentRow - 1);
-  } else {
+  } else { //square
     changeOverlay(currentCol + 1, currentRow);
     changeOverlay(currentCol, currentRow + 1);
     changeOverlay(currentCol + 1, currentRow + 1);
   }
   
 
-  for (let x = 0; x < NUM_COLS ; x++){
+  for (let x = 0; x < NUM_COLS ; x++){ //renders all active overlay squares with a data of 1
     for (let y = 0; y < NUM_ROWS; y++){
       if (overlayData[y][x] === 1) {
         fill(0, 255, 0, 50)
@@ -112,8 +115,7 @@ function winCondition(){
   let startingColor = gridData[0][0]; //starting variable used to check for win condition each frame
   let winCondition = true; //bool to check if game was won
 
-  //loop to check
-  for (let x = 0; x < NUM_COLS ; x++){
+  for (let x = 0; x < NUM_COLS ; x++){ //loop to compare square color
     for (let y = 0; y < NUM_ROWS; y++){
       let color = gridData[y][x]
 
@@ -123,7 +125,7 @@ function winCondition(){
 
   gameWon = winCondition; //set the global variable to win condition
 
-  if (gameWon === true) { //if game has been won
+  if (gameWon === true) { //if game has been won then render the win screen
     fill(0, 255, 0);
     textSize(100);
     textAlign(CENTER);
