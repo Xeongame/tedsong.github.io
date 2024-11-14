@@ -66,9 +66,9 @@ function mousePressed(){
 function keyPressed(){
   if (key === " "){ //changes mode when space is pressed
     if (fillMode === "cross"){
-      fillMode = "square"
+      fillMode = "square";
     } else {
-      fillMode = "cross"
+      fillMode = "cross";
     }
   }
 }
@@ -104,7 +104,7 @@ function drawOverlay(){
   for (let x = 0; x < NUM_COLS ; x++){ //renders all active overlay squares with a data of 1
     for (let y = 0; y < NUM_ROWS; y++){
       if (overlayData[y][x] === 1) {
-        fill(0, 255, 0, 50)
+        fill(0, 255, 0, 50);
         rect(x*rectWidth, y*rectHeight, rectWidth, rectHeight);
       }
     }
@@ -117,7 +117,7 @@ function winCondition(){
 
   for (let x = 0; x < NUM_COLS ; x++){ //loop to compare square color
     for (let y = 0; y < NUM_ROWS; y++){
-      let color = gridData[y][x]
+      let color = gridData[y][x];
 
       if (startingColor !== color) winCondition = false; //if just one square color doesn't match then game hasn't been won
     }
