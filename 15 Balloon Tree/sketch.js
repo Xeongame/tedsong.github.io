@@ -38,7 +38,7 @@ function drawLine( x1,  y1,  x2,  y2,  depth) {
 function drawLeaf(x, y, depth) {
   if (depth < leafDepth) { //draw leaf only if the depth less than the max depth set by the user
     strokeWeight(1);
-    randomSeed(step * stepMultiplier); //random but CONSISTENT color generation based on count variable
+    randomSeed(step * stepMultiplier); //random but CONSISTENT generation based on count variable
     fill(random(0, 255), random(0, 255), random(0, 255), 127);
     circle(x, y, leafSize + scale * sqrt(depth + 0.25) * random(0.5, 1.2));
 
