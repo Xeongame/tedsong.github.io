@@ -13,7 +13,7 @@ let length = 30;
 
 let pacX = 0;
 let pacY = 0;
-let pacSpeed = 7.4;
+let pacSpeed = 7;
 let grids = [];
 let paths = [];
 let player 
@@ -24,10 +24,10 @@ class pac {
     this.column = column || 0;
     this.moveX = 0;
     this.moveY = 0;
-
-    let coordinates = getGridCenter(this.row, this.column);
-    this.x = coordinates[0];
-    this.y = coordinates[1];
+    let grid = grids[this.row][this.column]
+  
+    this.x = grid[0] + length/2
+    this.y = grid[1] + length/2
     this.dir = "right";
   }
 
@@ -36,57 +36,60 @@ class pac {
     circle(this.x, this.y, length * 0.8);
   }
 
-  move() {
-    let grid = grids[this.row][this.column]
+  getPath() {
     let path = paths[this.row][this.column]
-    let choosenPath
-    let index
-
-    function find(n) {
-      return n === 
-    }
+    let subPath
+    let pathIndex
 
     if (this.dir === "right") { 
-      choosenPath = path[0]
-      index = choosenPath.findIndex(find);
+      subPath = path[0]
+      this.moveX = pacSpeed
 
     } else if (this.dir === "left") { 
-      nextGrid = grids[this.row][this.column - 1];
-      this.moveX = -pacSpeed;
+      subPath = path[0]
+      this.moveX = -pacSpeed
 
     } else if (this.dir === "up") { 
-      if (grids[this.row - 1]) {
-        nextGrid = grids[this.row - 1][this.column];
-        this.moveY = -pacSpeed;
-        print(nextGrid, this.row)
-      }
+      subPath = path[1]
+      this.moveY = -pacSpeed
+      
     } else { 
-      if (grids[this.row + 1]) {
-        nextGrid = grids[this.row + 1][this.column]; 
-        this.moveY = pacSpeed
+      subPath = path[1]
+      this.moveY = pacSpeed
+
+    }
+
+    for (let i = 0; i < subPath.length; i++) {
+      let x = subPath[i][0]
+      let y = subPath[i][1]
+
+      if (this.x === x && this.y === y) {
+        pathIndex = i
       }
     }
 
-    //print(nextGrid)
-    if (nextGrid) {
-      let dirX = this.moveX/Math.abs(this.moveX)
-      let dirY = this.moveY/Math.abs(this.moveY)
+    this.currentPath = subPath
+    return pathIndex
+  }
 
-      if (this.x * dirX > nextGrid[0] * dirX) {
-        this.column += dirX;
-      }
-      print(this.row, dirY, this.moveY, nextGrid[1])
-      if (this.y * dirY > nextGrid[1] * dirY) {
-        this.row += dirY;
-        
-      }
+  move() {
+    this.moveX = 0
+    this.moveY = 0
 
-      this.x += this.moveX;
-      this.y += this.moveY;
-    } else {
-      this.x = grids[this.row][this.column][0] + length/2
-      this.y = grids[this.row][this.column][1] + length/2;
+    let pathIndex = this.getPath()
+    let dif = this.currentPath.length - pathIndex
+
+    print(dif)
+    if (dif <= pacSpeed) {
+      print(pathIndex)
+      this.column += 1
+      pathIndex = this.getPath()
     }
+
+    let newIndex = Math.min(pathIndex + this.moveX, this.currentPath.length - 1)
+    let nextPath = this.currentPath[newIndex]
+    this.x = nextPath[0]
+    this.y = nextPath[1]
   }
 }
 
@@ -150,14 +153,6 @@ function setup() {
 
   print(grids, paths)
   player = new pac();
-}
-
-function getGridCenter(row, column) {
-  let g = grids[row][column]
-  let x = g[0] + length/2
-  let y = g[1] + length/2
-
-  return [x, y];
 }
 
 function drawMap() {
