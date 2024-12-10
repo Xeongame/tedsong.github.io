@@ -5,15 +5,15 @@
 // Extra for Experts:
 // - describe what you did to take this project "above and beyond"
 
-let columnNum = 38;
-let rowNum = 28;
+let columnNum = 20;
+let rowNum = 16;
 let spacing = 6;
 let border = 2;
 let length = 30;
 
 let pacX = 0;
 let pacY = 0;
-let pacSpeed = 7;
+let pacSpeed = 5;
 let grids = [];
 let paths = [];
 let player 
@@ -29,6 +29,8 @@ class pac {
     this.x = grid[0] + length/2
     this.y = grid[1] + length/2
     this.dir = "right";
+    this.dirX = 1;
+    this.dirY = 1;
   }
 
   show() {
@@ -36,60 +38,81 @@ class pac {
     circle(this.x, this.y, length * 0.8);
   }
 
-  getPath() {
+  pathfind() {
     let path = paths[this.row][this.column]
-    let subPath
-    let pathIndex
+    let waypoints
+    let index
 
+    //print(this.column)
     if (this.dir === "right") { 
-      subPath = path[0]
+      waypoints = path[0]
       this.moveX = pacSpeed
 
     } else if (this.dir === "left") { 
-      subPath = path[0]
+      waypoints = path[0]
       this.moveX = -pacSpeed
+      this.dirX = -1
 
     } else if (this.dir === "up") { 
-      subPath = path[1]
+      waypoints = path[1]
       this.moveY = -pacSpeed
-      
+      this.dirY = -1
+
     } else { 
-      subPath = path[1]
+      waypoints = path[1]
       this.moveY = pacSpeed
 
     }
 
-    for (let i = 0; i < subPath.length; i++) {
-      let x = subPath[i][0]
-      let y = subPath[i][1]
+    for (let i = 0; i < waypoints.length; i++) {
+      let x = waypoints[i][0]
+      let y = waypoints[i][1]
 
       if (this.x === x && this.y === y) {
-        pathIndex = i
+        index = i
       }
     }
 
-    this.currentPath = subPath
-    return pathIndex
+    this.waypoints = waypoints
+    return index
   }
 
   move() {
     this.moveX = 0
     this.moveY = 0
+    this.dirX = 1;
+    this.dirY = 1;
 
-    let pathIndex = this.getPath()
-    let dif = this.currentPath.length - pathIndex
+    let index = this.pathfind()
+    let dif = this.waypoints.length - index
+    let dir = (this.dirX/Math.abs(this.dirX)) * (this.dirY/Math.abs(this.dirY))
 
-    print(dif)
-    if (dif <= pacSpeed) {
-      print(pathIndex)
-      this.column += 1
-      pathIndex = this.getPath()
+    print(dif, dir, this.column, this.row, this.waypoints.length)
+    if (dif * dir <= pacSpeed * dir) {
+      if (this.moveX !== 0) {
+        if (this.column < columnNum - 1) {
+          this.column += dir
+          this.waypoints = paths[this.row][this.column]
+          this.x += this.moveX
+        }
+        
+      } else {
+        if (this.row < rowNum - 1) {
+          this.row += 1
+          this.waypoints = paths[this.row][this.column]
+          this.y += this.moveY
+        }
+      }
+
+      index = this.pathfind()
+    } else {
+      print("s")
+      index = Math.min(index + this.moveX + this.moveY, this.waypoints.length - 1)
     }
 
-    let newIndex = Math.min(pathIndex + this.moveX, this.currentPath.length - 1)
-    let nextPath = this.currentPath[newIndex]
-    this.x = nextPath[0]
-    this.y = nextPath[1]
+    let nextPoint = this.waypoints[index]
+    this.x = nextPoint[0]
+    this.y = nextPoint[1]
   }
 }
 
@@ -124,7 +147,7 @@ function setup() {
         }
       } else if (x === columnNum - 1) {
         for (let i = centerX; i >= centerX - length/2; i--) {
-          xPoints.push([i, centerY])
+          xPoints.unshift([i, centerY])
         }
       } else {
         for (let i = centerX - length/2; i < centerX + length/2; i++) {
@@ -138,7 +161,7 @@ function setup() {
         }
       } else if (y === rowNum - 1) {
         for (let i = centerY; i >= centerY - length/2; i--) {
-          yPoints.push([centerX, i])
+          yPoints.unshift([centerX, i])
         }
       } else {
         for (let i = centerY - length/2; i < centerY + length/2; i++) {
