@@ -29,8 +29,7 @@ class pac {
     this.x = grid[0] + length/2
     this.y = grid[1] + length/2
     this.dir = "right";
-    this.dirX = 1;
-    this.dirY = 1;
+    this.lastDir = "right";
   }
 
   show() {
@@ -64,6 +63,7 @@ class pac {
 
     }
 
+    print(waypoints, this.x, this.y)
     for (let i = 0; i < waypoints.length; i++) {
       let x = waypoints[i][0]
       let y = waypoints[i][1]
@@ -84,29 +84,25 @@ class pac {
     this.dirY = 1;
 
     let index = this.pathfind()
-    let dif = this.waypoints.length - index
     let dir = (this.dirX/Math.abs(this.dirX)) * (this.dirY/Math.abs(this.dirY))
-
-    print(dif, dir, this.column, this.row, this.waypoints.length)
-    if (dif * dir <= pacSpeed * dir) {
+    let dif = dir > 0 && this.waypoints.length - index || index + 1
+   
+    if (dif <= pacSpeed) { //moving out of current grid
       if (this.moveX !== 0) {
-        if (this.column < columnNum - 1) {
+        if (paths[this.row][this.column + dir]) {
           this.column += dir
-          this.waypoints = paths[this.row][this.column]
           this.x += this.moveX
         }
         
       } else {
-        if (this.row < rowNum - 1) {
-          this.row += 1
-          this.waypoints = paths[this.row][this.column]
+        if (paths[this.row + dir]) {
+          this.row += dir
           this.y += this.moveY
         }
       }
 
       index = this.pathfind()
     } else {
-      print("s")
       index = Math.min(index + this.moveX + this.moveY, this.waypoints.length - 1)
     }
 
