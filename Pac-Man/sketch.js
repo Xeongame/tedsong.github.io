@@ -13,7 +13,7 @@ let length = 30;
 
 let pacX = 0;
 let pacY = 0;
-let pacSpeed = 5;
+let pacSpeed = 3;
 let grids = [];
 let paths = [];
 let player 
@@ -38,42 +38,7 @@ class pac {
   }
 
   pathfind() {
-    let path = paths[this.row][this.column]
-    let waypoints
-    let index
-
-    //print(this.column)
-    if (this.dir === "right") { 
-      waypoints = path[0]
-      this.moveX = pacSpeed
-
-    } else if (this.dir === "left") { 
-      waypoints = path[0]
-      this.moveX = -pacSpeed
-      this.dirX = -1
-
-    } else if (this.dir === "up") { 
-      waypoints = path[1]
-      this.moveY = -pacSpeed
-      this.dirY = -1
-
-    } else { 
-      waypoints = path[1]
-      this.moveY = pacSpeed
-
-    }
-
-    print(waypoints, this.x, this.y)
-    for (let i = 0; i < waypoints.length; i++) {
-      let x = waypoints[i][0]
-      let y = waypoints[i][1]
-
-      if (this.x === x && this.y === y) {
-        index = i
-      }
-    }
-
-    this.waypoints = waypoints
+    
     return index
   }
 
@@ -83,30 +48,66 @@ class pac {
     this.dirX = 1;
     this.dirY = 1;
 
-    let index = this.pathfind()
+    let path = paths[this.row][this.column]
+
+    //print(this.column)
+    if (this.dir === "right") { 
+      this.waypoints = path[0]
+      this.moveX = pacSpeed
+
+    } else if (this.dir === "left") { 
+      this.waypoints = path[0]
+      this.moveX = -pacSpeed
+      this.dirX = -1
+
+    } else if (this.dir === "up") { 
+      this.waypoints = path[1]
+      this.moveY = -pacSpeed
+      this.dirY = -1
+
+    } else { 
+      this.waypoints = path[1]
+      this.moveY = pacSpeed
+
+    }
+
+    for (let i = 0; i < this.waypoints.length; i++) {
+      let x = this.waypoints[i][0]
+      let y = this.waypoints[i][1]
+
+      if (this.x === x && this.y === y) {
+        this.currentPointIndex = i
+      }
+    }
+
     let dir = (this.dirX/Math.abs(this.dirX)) * (this.dirY/Math.abs(this.dirY))
-    let dif = dir > 0 && this.waypoints.length - index || index + 1
-   
+    let dif = dir > 0 && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1
+
+    print(dif, this.moveX, this.currentPointIndex)
     if (dif <= pacSpeed) { //moving out of current grid
       if (this.moveX !== 0) {
+        print("sd")
         if (paths[this.row][this.column + dir]) {
+          print("sda")
           this.column += dir
-          this.x += this.moveX
+          this.waypoints = paths[this.row][this.column][0]
+          this.moveX -= dif * dir
+          this.currentPointIndex = 0
         }
         
       } else {
         if (paths[this.row + dir]) {
           this.row += dir
+          this.waypoints = paths[this.row][this.column][1]
           this.y += this.moveY
         }
       }
-
-      index = this.pathfind()
-    } else {
-      index = Math.min(index + this.moveX + this.moveY, this.waypoints.length - 1)
     }
 
-    let nextPoint = this.waypoints[index]
+    print(this.column)
+    this.nextPointIndex = Math.min(this.currentPointIndex + this.moveX + this.moveY, this.waypoints.length - 1)
+
+    let nextPoint = this.waypoints[this.nextPointIndex]
     this.x = nextPoint[0]
     this.y = nextPoint[1]
   }
