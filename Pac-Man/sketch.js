@@ -9,7 +9,7 @@ let columnNum = 20;
 let rowNum = 16;
 let spacing = 6;
 let border = 2;
-let length = 30;
+let length = 32;
 
 let pacX = 0;
 let pacY = 0;
@@ -37,18 +37,12 @@ class pac {
     circle(this.x, this.y, length * 0.8);
   }
 
-  pathfind() {
-    
-    return index
-  }
-
   move() {
     this.moveX = 0
     this.moveY = 0
-    this.dirX = 1;
-    this.dirY = 1;
 
     let path = paths[this.row][this.column]
+    let dirInt = 1;
 
     //print(this.column)
     if (this.dir === "right") { 
@@ -58,12 +52,12 @@ class pac {
     } else if (this.dir === "left") { 
       this.waypoints = path[0]
       this.moveX = -pacSpeed
-      this.dirX = -1
+      dirInt = -1
 
     } else if (this.dir === "up") { 
       this.waypoints = path[1]
       this.moveY = -pacSpeed
-      this.dirY = -1
+      dirInt = -1
 
     } else { 
       this.waypoints = path[1]
@@ -80,32 +74,55 @@ class pac {
       }
     }
 
-    let dir = (this.dirX/Math.abs(this.dirX)) * (this.dirY/Math.abs(this.dirY))
-    let dif = dir > 0 && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1
+    //find the next grid's path, if it exists
+    if (this.moveX !== 0) { //moving on the x axis
+      if (paths[this.row][this.column + dirInt]) {
+        this.nextPath = paths[this.row][this.column + dirInt][0]
+      }
+    } else { //moving on the y axis
+      if (paths[this.row + dirInt]) {
+        this.nextPath = paths[this.row + dirInt][this.column][1]
+      }
+    }
 
-    print(dif, this.moveX, this.currentPointIndex)
+    let dif = (dirInt > 0) && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1
+    let moveout = false;
+    
+    if (this.lastDir !== this.dir) {
+      print("Change direction")
+      let nextMiddle 
+    }
+    
     if (dif <= pacSpeed) { //moving out of current grid
-      if (this.moveX !== 0) {
-        print("sd")
-        if (paths[this.row][this.column + dir]) {
-          print("sda")
-          this.column += dir
-          this.waypoints = paths[this.row][this.column][0]
-          this.moveX -= dif * dir
-          this.currentPointIndex = 0
+      if (this.moveX !== 0) { //moving on the x axis
+        if (paths[this.row][this.column + dirInt]) {
+          this.column += dirInt
+          this.waypoints = this.nextPath
+          this.moveX -= dif * dirInt
+          moveout = true
         }
         
-      } else {
-        if (paths[this.row + dir]) {
-          this.row += dir
-          this.waypoints = paths[this.row][this.column][1]
-          this.y += this.moveY
+      } else { //moving on the y axis
+        if (paths[this.row + dirInt]) {
+          this.row += dirInt
+          this.waypoints = this.nextPath
+          this.moveY -= dif * dirInt
+          moveout = true
+
+        }
+      }
+
+      if (moveout === true) { //if there is a new grid to move into
+        if (dirInt > 0) { //assign new position based on moving direction
+          this.currentPointIndex = 0;
+        } else {
+          this.currentPointIndex = this.waypoints.length - 1;
         }
       }
     }
 
-    print(this.column)
-    this.nextPointIndex = Math.min(this.currentPointIndex + this.moveX + this.moveY, this.waypoints.length - 1)
+    this.nextPointIndex = Math.max(0, Math.min(this.currentPointIndex + this.moveX + this.moveY, this.waypoints.length - 1))
+    this.lastDir = this.dir
 
     let nextPoint = this.waypoints[this.nextPointIndex]
     this.x = nextPoint[0]
