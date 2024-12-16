@@ -77,27 +77,47 @@ class pac {
     //find the next grid's path, if it exists
     if (this.moveX !== 0) { //moving on the x axis
       if (paths[this.row][this.column + dirInt]) {
-        this.nextPath = paths[this.row][this.column + dirInt][0]
+        this.nextWaypoints = paths[this.row][this.column + dirInt][0]
       }
     } else { //moving on the y axis
       if (paths[this.row + dirInt]) {
-        this.nextPath = paths[this.row + dirInt][this.column][1]
+        this.nextWaypoints = paths[this.row + dirInt][this.column][1]
       }
     }
 
     let dif = (dirInt > 0) && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1
     let moveout = false;
+    let perpendicular = ((this.dir === "up" || this.dir === "down") && (this.lastDir === "right" || this.lastDir === "left")) || (this.dir === "left" || this.dir === "right") && (this.lastDir === "up" || this.lastDir === "down")
     
-    if (this.lastDir !== this.dir) {
+    if (this.lastDir !== this.dir && perpendicular) {
       print("Change direction")
-      let nextMiddle 
+      let nextCenterIndex = this.nextWaypoints.length - 1;
+
+      if (this.nextWaypoints.length % (length/2) === 0) {
+        nextCenterIndex = this.nextWaypoints.length - length/2
+      }
+      let nextCenter = this.nextWaypoints[Number(nextCenterIndex)]
+
+      let thisCenterIndex = this.waypoints.length - 1;
+
+      if (this.waypoints.length % (length/2) === 0) {
+        thisCenterIndex = this.waypoints.length - length/2
+      }
+      let thisCenter = this.waypoints[Number(thisCenterIndex)]
+      
+      if ((this.currentPointIndex - thisCenterIndex) * dirInt < 0) {
+        nextCenter = thisCenter
+      }
+
     }
+
+   
     
     if (dif <= pacSpeed) { //moving out of current grid
       if (this.moveX !== 0) { //moving on the x axis
         if (paths[this.row][this.column + dirInt]) {
           this.column += dirInt
-          this.waypoints = this.nextPath
+          this.waypoints = this.nextWaypoints
           this.moveX -= dif * dirInt
           moveout = true
         }
@@ -105,7 +125,7 @@ class pac {
       } else { //moving on the y axis
         if (paths[this.row + dirInt]) {
           this.row += dirInt
-          this.waypoints = this.nextPath
+          this.waypoints = this.nextWaypoints
           this.moveY -= dif * dirInt
           moveout = true
 
