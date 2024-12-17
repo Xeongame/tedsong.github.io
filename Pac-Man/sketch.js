@@ -13,7 +13,7 @@ let length = 32;
 
 let pacX = 0;
 let pacY = 0;
-let pacSpeed = 3;
+let pacSpeed = 1;
 let grids = [];
 let paths = [];
 let player 
@@ -37,7 +37,7 @@ class pac {
     circle(this.x, this.y, length * 0.8);
   }
 
-  move() {
+  locate() {
     this.moveX = 0
     this.moveY = 0
 
@@ -84,55 +84,66 @@ class pac {
         this.nextWaypoints = paths[this.row + dirInt][this.column][1]
       }
     }
+  }
 
-    let dif = (dirInt > 0) && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1
-    let moveout = false;
-    let perpendicular = ((this.dir === "up" || this.dir === "down") && (this.lastDir === "right" || this.lastDir === "left")) || (this.dir === "left" || this.dir === "right") && (this.lastDir === "up" || this.lastDir === "down")
+  move() {
+    this.locate()
+
+    let dirInt = (this.moveX + this.moveY)/Math.abs(this.moveX + this.moveY)
+    let indexDif = (dirInt > 0) && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1
+    let isLeaving = false;
+    let isPerpendicular = ((this.dir === "up" || this.dir === "down") && (this.lastDir === "right" || this.lastDir === "left")) || (this.dir === "left" || this.dir === "right") && (this.lastDir === "up" || this.lastDir === "down")
     
-    if (this.lastDir !== this.dir && perpendicular) {
+    if (this.lastDir !== this.dir && isPerpendicular) {
       print("Change direction")
-      let nextCenterIndex = this.nextWaypoints.length - 1;
-
-      if (this.nextWaypoints.length % (length/2) === 0) {
-        nextCenterIndex = this.nextWaypoints.length - length/2
-      }
-      let nextCenter = this.nextWaypoints[Number(nextCenterIndex)]
-
-      let thisCenterIndex = this.waypoints.length - 1;
-
-      if (this.waypoints.length % (length/2) === 0) {
-        thisCenterIndex = this.waypoints.length - length/2
-      }
-      let thisCenter = this.waypoints[Number(thisCenterIndex)]
       
-      if ((this.currentPointIndex - thisCenterIndex) * dirInt < 0) {
+      let nextCenterIndex = getGridCenter(this.nextWaypoints)
+      let thisCenterIndex = getGridCenter(this.waypoints)
+  
+      let nextCenter = this.nextWaypoints[nextCenterIndex]
+      let thisCenter = this.waypoints[thisCenterIndex]
+      
+      if ((this.currentPointIndex - thisCenterIndex) * dirInt <= 0) {
         nextCenter = thisCenter
       }
 
+      if (this.x !== nextCenter[0] || this.y !== nextCenter[1]) {
+        print("not there")
+        print(this.x, this.y, nextCenter, this.currentPointIndex, thisCenterIndex)
+
+        this.dir = this.lastDir
+        this.locate()
+
+        dirInt = (this.moveX + this.moveY)/Math.abs(this.moveX + this.moveY)
+        indexDif = (dirInt > 0) && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1
+        //return
+      }
     }
 
-   
     
-    if (dif <= pacSpeed) { //moving out of current grid
+    
+
+
+    if (indexDif <= pacSpeed) { //moving out of current grid
       if (this.moveX !== 0) { //moving on the x axis
         if (paths[this.row][this.column + dirInt]) {
           this.column += dirInt
           this.waypoints = this.nextWaypoints
-          this.moveX -= dif * dirInt
-          moveout = true
+          this.moveX -= indexDif * dirInt
+          isLeaving = true
         }
         
       } else { //moving on the y axis
         if (paths[this.row + dirInt]) {
           this.row += dirInt
           this.waypoints = this.nextWaypoints
-          this.moveY -= dif * dirInt
-          moveout = true
+          this.moveY -= indexDif * dirInt
+          isLeaving = true
 
         }
       }
 
-      if (moveout === true) { //if there is a new grid to move into
+      if (isLeaving) { //if there is a new grid to move into
         if (dirInt > 0) { //assign new position based on moving direction
           this.currentPointIndex = 0;
         } else {
@@ -152,6 +163,16 @@ class pac {
 
 class ghost {
 
+}
+
+function getGridCenter(array) {
+  let index = array.length - 1;
+
+  if (array.length % (length/2) === 0) {
+    index = array.length - length/2
+  }
+
+  return index
 }
 
 function setup() {
