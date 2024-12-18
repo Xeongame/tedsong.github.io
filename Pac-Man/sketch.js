@@ -9,11 +9,11 @@ let columnNum = 20;
 let rowNum = 16;
 let spacing = 6;
 let border = 2;
-let length = 32;
+let length = 50;
 
 let pacX = 0;
 let pacY = 0;
-let pacSpeed = 1;
+let pacSpeed = 2;
 let grids = [];
 let paths = [];
 let player 
@@ -42,6 +42,7 @@ class pac {
     this.moveY = 0
 
     let path = paths[this.row][this.column]
+    let lastDir = this.dir
     let dirInt = 1;
 
     //print(this.column)
@@ -84,6 +85,11 @@ class pac {
         this.nextWaypoints = paths[this.row + dirInt][this.column][1]
       }
     }
+
+    if (this.nextWaypoints === false) {
+      this.dir = lastDir
+      this.locate()
+    }
   }
 
   move() {
@@ -91,11 +97,13 @@ class pac {
 
     let dirInt = (this.moveX + this.moveY)/Math.abs(this.moveX + this.moveY)
     let indexDif = (dirInt > 0) && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1
-    let isLeaving = false;
     let isPerpendicular = ((this.dir === "up" || this.dir === "down") && (this.lastDir === "right" || this.lastDir === "left")) || (this.dir === "left" || this.dir === "right") && (this.lastDir === "up" || this.lastDir === "down")
     
+    let isLeaving = false;
+    let forcedMove = false;
+
     if (this.lastDir !== this.dir && isPerpendicular) {
-      print("Change direction")
+      //print("Change direction")
       
       let nextCenterIndex = getGridCenter(this.nextWaypoints)
       let thisCenterIndex = getGridCenter(this.waypoints)
@@ -108,21 +116,21 @@ class pac {
       }
 
       if (this.x !== nextCenter[0] || this.y !== nextCenter[1]) {
-        print("not there")
-        print(this.x, this.y, nextCenter, this.currentPointIndex, thisCenterIndex)
+        //print(dif, dirInt)
+        //print("not there")
+       // print(this.x, this.y, nextCenter, this.currentPointIndex, thisCenterIndex)
 
+        this.queueDir = this.dir
         this.dir = this.lastDir
         this.locate()
 
+        forcedMove = true;
         dirInt = (this.moveX + this.moveY)/Math.abs(this.moveX + this.moveY)
         indexDif = (dirInt > 0) && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1
+        print(indexDif)
         //return
       }
     }
-
-    
-    
-
 
     if (indexDif <= pacSpeed) { //moving out of current grid
       if (this.moveX !== 0) { //moving on the x axis
@@ -155,6 +163,10 @@ class pac {
     this.nextPointIndex = Math.max(0, Math.min(this.currentPointIndex + this.moveX + this.moveY, this.waypoints.length - 1))
     this.lastDir = this.dir
 
+    if (forcedMove) {
+      this.dir = this.queueDir
+    }
+
     let nextPoint = this.waypoints[this.nextPointIndex]
     this.x = nextPoint[0]
     this.y = nextPoint[1]
@@ -177,7 +189,7 @@ function getGridCenter(array) {
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
-
+  frameRate(120)
   for (let x = 0; x < columnNum; x++) {
     for (let y = 0; y < rowNum; y++) {
       let row = grids[y] || [];
