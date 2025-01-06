@@ -18,6 +18,9 @@ let grids = [];
 let paths = [];
 let player 
 
+let debugColumn = 0;
+let debugRow = 0;
+
 class pac {
   constructor(row, column) {
     this.row = row || 0;
@@ -95,22 +98,22 @@ class pac {
   move() {
     this.locate()
 
-    let dirInt = (this.moveX + this.moveY)/Math.abs(this.moveX + this.moveY)
-    let indexDif = (dirInt > 0) && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1
+    let dirInt = (this.moveX + this.moveY)/Math.abs(this.moveX + this.moveY) // positive = moving left to right or top to bottom, negative = moving right to left or bottom to top
+    let indexDif = (dirInt > 0) && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1 //calculates difference of steps from the next grid 
+
+    // checks if direction changed in a perpendicular direction, ex: previously moving up and now changing directions to move left
     let isPerpendicular = ((this.dir === "up" || this.dir === "down") && (this.lastDir === "right" || this.lastDir === "left")) || (this.dir === "left" || this.dir === "right") && (this.lastDir === "up" || this.lastDir === "down")
     
     let isLeaving = false;
     let forcedMove = false;
 
-    if (this.lastDir !== this.dir && isPerpendicular) {
-      //print("Change direction")
-      
-      let nextCenterIndex = getGridCenter(this.nextWaypoints)
-      let thisCenterIndex = getGridCenter(this.waypoints)
+    let nextCenterIndex = getGridCenter(this.nextWaypoints)
+    let thisCenterIndex = getGridCenter(this.waypoints)
   
-      let nextCenter = this.nextWaypoints[nextCenterIndex]
-      let thisCenter = this.waypoints[thisCenterIndex]
-      
+    let nextCenter = this.nextWaypoints[nextCenterIndex]
+    let thisCenter = this.waypoints[thisCenterIndex]
+
+    if (this.lastDir !== this.dir && isPerpendicular) {
       if ((this.currentPointIndex - thisCenterIndex) * dirInt <= 0) {
         nextCenter = thisCenter
       }
@@ -130,6 +133,11 @@ class pac {
         print(indexDif)
         //return
       }
+    }
+
+
+    if (this.currentPointIndex === thisCenterIndex) {
+      print("In middle")
     }
 
     if (indexDif <= pacSpeed) { //moving out of current grid
@@ -236,7 +244,7 @@ function setup() {
         }
       }
 
-      row[x] = [xPoints, yPoints]
+      row[x] = [xPoints, yPoints, false]
       paths[y] = row
     }
   }
@@ -247,13 +255,20 @@ function setup() {
 
 function drawMap() {
   stroke(0, 0, 255)
-  fill(0)
+  
   strokeWeight(border);
 
   for (let row = 0; row < grids.length; row++) {
     for (let column = 0; column < grids[row].length; column ++) {
       let x = grids[row][column][0]
       let y = grids[row][column][1]
+      let pathBlocked = paths[row][column][2]
+      //print(paths[row][column])
+      
+      fill(0)
+      if (pathBlocked) {
+        fill(255, 0, 0);
+      }
   
       //print(grids[row][column])
       rect(x, y, length, length)
@@ -264,10 +279,9 @@ function drawMap() {
 function debug() {
   //print(mouseX, mouseY)
 
-  let column = Math.floor(mouseX / length + 1)
-  let row = Math.floor(mouseY / length + 1)
+  debugColumn = Math.floor(mouseX / length)
+  debugRow = Math.floor(mouseY / length)
 
-  print(column, row)
 }
 
 function draw() {
@@ -292,5 +306,7 @@ function keyPressed() {
 }
 
 function mouseClicked() {
-
+  print(debugColumn, debugRow)
+  paths[debugRow][debugColumn][2] = true; // adds a 'blocked' property to the grid for debugging
+  print(paths[debugRow][debugColumn])
 }
