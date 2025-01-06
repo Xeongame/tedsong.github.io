@@ -13,7 +13,7 @@ let length = 50;
 
 let pacX = 0;
 let pacY = 0;
-let pacSpeed = 2;
+let pacSpeed = 5;
 let grids = [];
 let paths = [];
 let player 
@@ -261,10 +261,20 @@ function drawMap() {
   }
 }
 
+function debug() {
+  //print(mouseX, mouseY)
+
+  let column = Math.floor(mouseX / length + 1)
+  let row = Math.floor(mouseY / length + 1)
+
+  print(column, row)
+}
+
 function draw() {
   background(0);
   
   drawMap()
+  debug()
   player.show()
   player.move()
 }
@@ -279,4 +289,8 @@ function keyPressed() {
   } else if (key === "d") {
     player.dir = "right"
   }
+}
+
+function mouseClicked() {
+
 }
