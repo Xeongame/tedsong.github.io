@@ -81,11 +81,13 @@ class pac {
     //find the next grid's path, if it exists
     if (this.moveX !== 0) { //moving on the x axis
       if (paths[this.row][this.column + dirInt]) {
-        this.nextWaypoints = paths[this.row][this.column + dirInt][0]
+        this.nextGridPath = paths[this.row][this.column + dirInt]
+        this.nextWaypoints = this.nextGridPath[0]
       }
     } else { //moving on the y axis
       if (paths[this.row + dirInt]) {
-        this.nextWaypoints = paths[this.row + dirInt][this.column][1]
+        this.nextGridPath = paths[this.row + dirInt][this.column]
+        this.nextWaypoints = this.nextGridPath[1]      
       }
     }
 
@@ -104,6 +106,8 @@ class pac {
     // checks if direction changed in a perpendicular direction, ex: previously moving up and now changing directions to move left
     let isPerpendicular = ((this.dir === "up" || this.dir === "down") && (this.lastDir === "right" || this.lastDir === "left")) || (this.dir === "left" || this.dir === "right") && (this.lastDir === "up" || this.lastDir === "down")
     
+    let isBlocked = this.nextGridPath[2];
+    let perpendicularBlocked =false
     let isLeaving = false;
     let forcedMove = false;
 
@@ -118,7 +122,7 @@ class pac {
         nextCenter = thisCenter
       }
 
-      if (this.x !== nextCenter[0] || this.y !== nextCenter[1]) {
+      if (this.x !== nextCenter[0] || this.y !== nextCenter[1] || isBlocked) {
         //print(dif, dirInt)
         //print("not there")
        // print(this.x, this.y, nextCenter, this.currentPointIndex, thisCenterIndex)
@@ -127,20 +131,36 @@ class pac {
         this.dir = this.lastDir
         this.locate()
 
-        forcedMove = true;
+        perpendicularBlocked = this.nextGridPath[2];
+        forcedMove = !perpendicularBlocked;
+
         dirInt = (this.moveX + this.moveY)/Math.abs(this.moveX + this.moveY)
         indexDif = (dirInt > 0) && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1
-        print(indexDif)
+        print("perp", forcedMove, isBlocked, perpendicularBlocked, this.dir, this.queueDir, indexDif)
         //return
       }
     }
 
 
-    if (this.currentPointIndex === thisCenterIndex) {
-      print("In middle")
-    }
+    if ((this.currentPointIndex === thisCenterIndex && isBlocked) || (perpendicularBlocked)) {
+      if (!forcedMove) {
+        indexDif = 0
+        this.moveX = 0;
+        this.moveY = 0;
+        print("STOP", this.currentPointIndex, thisCenterIndex)
+      }
+      
 
-    if (indexDif <= pacSpeed) { //moving out of current grid
+     
+      if (isPerpendicular) {
+        this.dir = this.lastDir
+        //forcedMove = false;
+        print(this.lastDir, this.queueDir, this.moveX, this.moveY)
+      
+      }
+    } 
+    
+    if (indexDif <= pacSpeed && (!isBlocked || (isBlocked && isPerpendicular))) { //moving out of current grid
       if (this.moveX !== 0) { //moving on the x axis
         if (paths[this.row][this.column + dirInt]) {
           this.column += dirInt
