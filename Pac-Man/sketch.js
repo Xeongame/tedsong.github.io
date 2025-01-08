@@ -122,7 +122,8 @@ class pac {
         nextCenter = thisCenter
       }
 
-      if (this.x !== nextCenter[0] || this.y !== nextCenter[1] || isBlocked) {
+      print(this.x, nextCenter[0], this.x !== nextCenter[0] || this.y !== nextCenter[1], isBlocked, this.nextGridPath, this.dir)
+      if (this.x !== nextCenter[0] || this.y !== nextCenter[1] || (isBlocked)) {
         //print(dif, dirInt)
         //print("not there")
        // print(this.x, this.y, nextCenter, this.currentPointIndex, thisCenterIndex)
@@ -138,29 +139,33 @@ class pac {
         indexDif = (dirInt > 0) && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1
         print("perp", forcedMove, isBlocked, perpendicularBlocked, this.dir, this.queueDir, indexDif)
         //return
+      } else {
+        print("MOVE PERP")
       }
     }
 
-
+    if (this.dir === "down") {
+      print("SD")
+    }
     if ((this.currentPointIndex === thisCenterIndex && isBlocked) || (perpendicularBlocked)) {
       if (!forcedMove) {
         indexDif = 0
         this.moveX = 0;
         this.moveY = 0;
-        print("STOP", this.currentPointIndex, thisCenterIndex)
+        print("STOP", this.dir, this.queueDir)
       }
       
-
-     
       if (isPerpendicular) {
         this.dir = this.lastDir
         //forcedMove = false;
-        print(this.lastDir, this.queueDir, this.moveX, this.moveY)
+        print(this.lastDir, this.queueDir, this.dir, this.nextGridPath, this.moveX, this.moveY)
       
       }
+    
     } 
     
-    if (indexDif <= pacSpeed && (!isBlocked || (isBlocked && isPerpendicular))) { //moving out of current grid
+    if (indexDif <= pacSpeed && (!isBlocked || (isBlocked && isPerpendicular && !perpendicularBlocked))) { //moving out of current grid
+      
       if (this.moveX !== 0) { //moving on the x axis
         if (paths[this.row][this.column + dirInt]) {
           this.column += dirInt
