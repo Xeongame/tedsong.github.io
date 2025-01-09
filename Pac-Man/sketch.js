@@ -31,8 +31,13 @@ class pac {
   
     this.x = grid[0] + length/2
     this.y = grid[1] + length/2
+
     this.dir = "right";
     this.lastDir = "right";
+    this.queueDir = "right";
+
+    this.queueMove = false;
+    this.surroundingGridPaths = []
   }
 
   show() {
@@ -78,20 +83,35 @@ class pac {
       }
     }
 
-    //find the next grid's path, if it exists
-    if (this.moveX !== 0) { //moving on the x axis
-      if (paths[this.row][this.column + dirInt]) {
-        this.nextGridPath = paths[this.row][this.column + dirInt]
-        this.nextWaypoints = this.nextGridPath[0]
-      }
-    } else { //moving on the y axis
-      if (paths[this.row + dirInt]) {
-        this.nextGridPath = paths[this.row + dirInt][this.column]
-        this.nextWaypoints = this.nextGridPath[1]      
-      }
+    // locate surrounding grids
+    if (paths[this.row][this.column + 1]) {
+      this.surroundingGridPaths.right = paths[this.row][this.column + 1]
     }
 
-    if (this.nextWaypoints === false) {
+    if (paths[this.row][this.column - 1]) {
+      this.surroundingGridPaths.left = paths[this.row][this.column - 1]
+    }
+
+    if (paths[this.row + 1]) {
+      this.surroundingGridPaths.down = paths[this.row + 1][this.column]     
+    }
+
+    if (paths[this.row - 1]) {
+      this.surroundingGridPaths.up = paths[this.row - 1][this.column]
+       
+    }
+
+
+    this.nextGridPath = this.surroundingGridPaths[this.dir]
+    this.queuedGridPath = this.surroundingGridPaths[this.queueDir]
+
+    if (this.moveX !== 0) { //moving on the x axis
+      this.nextWaypoints = this.nextGridPath[0]   
+    } else { //moving on the y axis
+      this.nextWaypoints = this.nextGridPath[1]   
+    }
+
+    if (!this.nextWaypoints) {
       this.dir = lastDir
       this.locate()
     }
@@ -107,7 +127,7 @@ class pac {
     let isPerpendicular = ((this.dir === "up" || this.dir === "down") && (this.lastDir === "right" || this.lastDir === "left")) || (this.dir === "left" || this.dir === "right") && (this.lastDir === "up" || this.lastDir === "down")
     
     let isBlocked = this.nextGridPath[2];
-    let perpendicularBlocked =false
+    let perpendicularBlocked = isPerpendicular && this.queuedGridPath[2]
     let isLeaving = false;
     let forcedMove = false;
 
@@ -122,8 +142,8 @@ class pac {
         nextCenter = thisCenter
       }
 
-      print(this.x, nextCenter[0], this.x !== nextCenter[0] || this.y !== nextCenter[1], isBlocked, this.nextGridPath, this.dir)
-      if (this.x !== nextCenter[0] || this.y !== nextCenter[1] || (isBlocked)) {
+      print(this.x, nextCenter[0], this.x !== nextCenter[0] || this.y !== nextCenter[1], isBlocked, perpendicularBlocked, this.nextGridPath, this.dir)
+      if (this.x !== nextCenter[0] || this.y !== nextCenter[1] || (perpendicularBlocked)) {
         //print(dif, dirInt)
         //print("not there")
        // print(this.x, this.y, nextCenter, this.currentPointIndex, thisCenterIndex)
@@ -132,6 +152,7 @@ class pac {
         this.dir = this.lastDir
         this.locate()
 
+        this.queueMove = true;
         perpendicularBlocked = this.nextGridPath[2];
         forcedMove = !perpendicularBlocked;
 
@@ -140,13 +161,11 @@ class pac {
         print("perp", forcedMove, isBlocked, perpendicularBlocked, this.dir, this.queueDir, indexDif)
         //return
       } else {
+        this.queueMove = false;
         print("MOVE PERP")
       }
     }
 
-    if (this.dir === "down") {
-      print("SD")
-    }
     if ((this.currentPointIndex === thisCenterIndex && isBlocked) || (perpendicularBlocked)) {
       if (!forcedMove) {
         indexDif = 0
