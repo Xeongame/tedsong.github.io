@@ -55,24 +55,25 @@ class pac {
 
     //print(this.column)
     if (this.dir === "right") { 
-      this.waypoints = path[0]
       this.moveX = pacSpeed
+      this.axisIndex = 0
 
     } else if (this.dir === "left") { 
-      this.waypoints = path[0]
       this.moveX = -pacSpeed
+      this.axisIndex = 0
       dirInt = -1
 
     } else if (this.dir === "up") { 
-      this.waypoints = path[1]
       this.moveY = -pacSpeed
+      this.axisIndex = 1
       dirInt = -1
 
     } else { 
-      this.waypoints = path[1]
       this.moveY = pacSpeed
-
+      this.axisIndex = 1
     }
+
+    this.waypoints = path[this.axisIndex] // axisIndex determines the waypoints chosen based on direction: 0 = moving on the x axis, 1 = moving on the y axis
 
     for (let i = 0; i < this.waypoints.length; i++) {
       let x = this.waypoints[i][0]
@@ -101,7 +102,6 @@ class pac {
        
     }
 
-
     this.nextGridPath = this.surroundingGridPaths[this.dir]
     this.queuedGridPath = this.surroundingGridPaths[this.queueDir]
 
@@ -125,14 +125,16 @@ class pac {
 
     // checks if direction changed in a perpendicular direction, ex: previously moving up and now changing directions to move left
     let isPerpendicular = ((this.dir === "up" || this.dir === "down") && (this.lastDir === "right" || this.lastDir === "left")) || (this.dir === "left" || this.dir === "right") && (this.lastDir === "up" || this.lastDir === "down")
-    
+    let queueMove = this.dir !== this.queueDir
+
     let isBlocked = this.nextGridPath[2];
     let perpendicularBlocked = isPerpendicular && this.queuedGridPath[2]
     let isLeaving = false;
-    let forcedMove = false;
+    let forcedMove = false; // forces moving in the old direction when trying to change directions at the wrong time
 
     let nextCenterIndex = getGridCenter(this.nextWaypoints)
     let thisCenterIndex = getGridCenter(this.waypoints)
+    let perpendicularMoveCenterIndex = getGridCenter(this.surroundingGridPaths[this.dir][this.axisIndex])
   
     let nextCenter = this.nextWaypoints[nextCenterIndex]
     let thisCenter = this.waypoints[thisCenterIndex]
@@ -140,9 +142,11 @@ class pac {
     if (this.lastDir !== this.dir && isPerpendicular) {
       if ((this.currentPointIndex - thisCenterIndex) * dirInt <= 0) {
         nextCenter = thisCenter
+        thisCenterIndex = perpendicularMoveCenterIndex
+        print("MOVe on", thisCenterIndex, this.surroundingGridPaths[this.dir], perpendicularMoveCenterIndex)
       }
 
-      print(this.x, nextCenter[0], this.x !== nextCenter[0] || this.y !== nextCenter[1], isBlocked, perpendicularBlocked, this.nextGridPath, this.dir)
+      print("move perp", this.x, nextCenter[0], this.x !== nextCenter[0] || this.y !== nextCenter[1], isBlocked, perpendicularBlocked, this.nextGridPath, this.queuedGridPath)
       if (this.x !== nextCenter[0] || this.y !== nextCenter[1] || (perpendicularBlocked)) {
         //print(dif, dirInt)
         //print("not there")
@@ -158,7 +162,7 @@ class pac {
 
         dirInt = (this.moveX + this.moveY)/Math.abs(this.moveX + this.moveY)
         indexDif = (dirInt > 0) && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1
-        print("perp", forcedMove, isBlocked, perpendicularBlocked, this.dir, this.queueDir, indexDif)
+        print("perp", forcedMove, isBlocked, perpendicularBlocked, this.dir, this.lastDir, this.queueDir, forcedMove)
         //return
       } else {
         this.queueMove = false;
@@ -166,15 +170,16 @@ class pac {
       }
     }
 
-    if ((this.currentPointIndex === thisCenterIndex && isBlocked) || (perpendicularBlocked)) {
+    if ((this.currentPointIndex === thisCenterIndex && isBlocked) || (perpendicularBlocked && this.x !== 200)) {
       if (!forcedMove) {
-        indexDif = 0
+        //indexDif = 0
+        print("STOP", this.dir, this.queueDir, this.lastDir, this.x, this.y, this.currentPointIndex, thisCenterIndex, perpendicularBlocked, isPerpendicular)
         this.moveX = 0;
         this.moveY = 0;
-        print("STOP", this.dir, this.queueDir)
+        
       }
       
-      if (isPerpendicular) {
+      if (isPerpendicular) { // if trying to turn onto a blocked tile, keep moving in the previous directiona
         this.dir = this.lastDir
         //forcedMove = false;
         print(this.lastDir, this.queueDir, this.dir, this.nextGridPath, this.moveX, this.moveY)
