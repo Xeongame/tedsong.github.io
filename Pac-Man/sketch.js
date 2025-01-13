@@ -164,11 +164,14 @@ class pac {
         this.queueMove = true;
         perpendicularBlocked = this.nextGridPath[2];
         forcedMove = !perpendicularBlocked;
-        asdasd
+
+        if (doubleCheck || !forcedMove) {
+
+        }
 
         dirInt = (this.moveX + this.moveY)/Math.abs(this.moveX + this.moveY)
         indexDif = (dirInt > 0) && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1
-        print("perp", forcedMove, isBlocked, perpendicularBlocked, this.dir, this.lastDir, this.queueDir, this.surroundingGridPaths[this.queueDir])
+        print("perp", forcedMove, doubleCheck, isBlocked, perpendicularBlocked, this.dir, this.lastDir, this.queueDir, this.surroundingGridPaths[this.queueDir])
         //return
       } else {
         this.queueMove = false;
