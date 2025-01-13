@@ -105,12 +105,15 @@ class pac {
     this.nextGridPath = this.surroundingGridPaths[this.dir]
     this.queuedGridPath = this.surroundingGridPaths[this.queueDir]
 
-    if (this.moveX !== 0) { //moving on the x axis
-      this.nextWaypoints = this.nextGridPath[0]   
-    } else { //moving on the y axis
-      this.nextWaypoints = this.nextGridPath[1]   
+    if (this.nextGridPath) {
+      if (this.moveX !== 0) { //moving on the x axis
+        this.nextWaypoints = this.nextGridPath[0]   
+      } else { //moving on the y axis
+        this.nextWaypoints = this.nextGridPath[1]   
+      }
+  
     }
-
+   
     if (!this.nextWaypoints) {
       this.dir = lastDir
       this.locate()
@@ -142,6 +145,7 @@ class pac {
     if (this.lastDir !== this.dir && isPerpendicular) {
       if ((this.currentPointIndex - thisCenterIndex) * dirInt <= 0) {
         nextCenter = thisCenter
+
         thisCenterIndex = perpendicularMoveCenterIndex
         print("MOVe on", thisCenterIndex, this.surroundingGridPaths[this.dir], perpendicularMoveCenterIndex)
       }
@@ -156,13 +160,15 @@ class pac {
         this.dir = this.lastDir
         this.locate()
 
+        let doubleCheck = perpendicularBlocked;
         this.queueMove = true;
         perpendicularBlocked = this.nextGridPath[2];
         forcedMove = !perpendicularBlocked;
+        asdasd
 
         dirInt = (this.moveX + this.moveY)/Math.abs(this.moveX + this.moveY)
         indexDif = (dirInt > 0) && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1
-        print("perp", forcedMove, isBlocked, perpendicularBlocked, this.dir, this.lastDir, this.queueDir, forcedMove)
+        print("perp", forcedMove, isBlocked, perpendicularBlocked, this.dir, this.lastDir, this.queueDir, this.surroundingGridPaths[this.queueDir])
         //return
       } else {
         this.queueMove = false;
@@ -172,11 +178,10 @@ class pac {
 
     if ((this.currentPointIndex === thisCenterIndex && isBlocked) || (perpendicularBlocked && this.x !== 200)) {
       if (!forcedMove) {
-        //indexDif = 0
+        indexDif = 0
         print("STOP", this.dir, this.queueDir, this.lastDir, this.x, this.y, this.currentPointIndex, thisCenterIndex, perpendicularBlocked, isPerpendicular)
         this.moveX = 0;
         this.moveY = 0;
-        
       }
       
       if (isPerpendicular) { // if trying to turn onto a blocked tile, keep moving in the previous directiona
