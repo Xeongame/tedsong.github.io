@@ -128,12 +128,12 @@ class pac {
 
     // checks if direction changed in a perpendicular direction, ex: previously moving up and now changing directions to move left
     let isPerpendicular = ((this.dir === "up" || this.dir === "down") && (this.lastDir === "right" || this.lastDir === "left")) || (this.dir === "left" || this.dir === "right") && (this.lastDir === "up" || this.lastDir === "down")
-    let queueMove = this.dir !== this.queueDir
 
     let isBlocked = this.nextGridPath[2];
     let perpendicularBlocked = isPerpendicular && this.queuedGridPath[2]
     let isLeaving = false;
     let forcedMove = false; // forces moving in the old direction when trying to change directions at the wrong time
+    let blockedForcedMove = false;
 
     let nextCenterIndex = getGridCenter(this.nextWaypoints)
     let thisCenterIndex = getGridCenter(this.waypoints)
@@ -142,44 +142,39 @@ class pac {
     let nextCenter = this.nextWaypoints[nextCenterIndex]
     let thisCenter = this.waypoints[thisCenterIndex]
 
+    // handles changing direction for perpendicular movement: can only change directions if at the middle of the grid
     if (this.lastDir !== this.dir && isPerpendicular) {
       if ((this.currentPointIndex - thisCenterIndex) * dirInt <= 0) {
         nextCenter = thisCenter
-
-        thisCenterIndex = perpendicularMoveCenterIndex
-        print("MOVe on", thisCenterIndex, this.surroundingGridPaths[this.dir], perpendicularMoveCenterIndex)
       }
 
-      print("move perp", this.x, nextCenter[0], this.x !== nextCenter[0] || this.y !== nextCenter[1], isBlocked, perpendicularBlocked, this.nextGridPath, this.queuedGridPath)
-      if (this.x !== nextCenter[0] || this.y !== nextCenter[1] || (perpendicularBlocked)) {
-        //print(dif, dirInt)
-        //print("not there")
-       // print(this.x, this.y, nextCenter, this.currentPointIndex, thisCenterIndex)
-
+      // debounce statement: forces the player to move in the old direction if not at middle or the next grid is blocked
+      if (this.x !== nextCenter[0] || this.y !== nextCenter[1] || (isBlocked)) {
+       // relocate using the old direction
         this.queueDir = this.dir
         this.dir = this.lastDir
         this.locate()
 
         let doubleCheck = perpendicularBlocked;
         this.queueMove = true;
-        perpendicularBlocked = this.nextGridPath[2];
+        perpendicularBlocked = this.nextGridPath[2]; //check the next grid 
         forcedMove = !perpendicularBlocked;
 
         if (doubleCheck || !forcedMove) {
-
+           blockedForcedMove = true;
         }
 
         dirInt = (this.moveX + this.moveY)/Math.abs(this.moveX + this.moveY)
         indexDif = (dirInt > 0) && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1
-        print("perp", forcedMove, doubleCheck, isBlocked, perpendicularBlocked, this.dir, this.lastDir, this.queueDir, this.surroundingGridPaths[this.queueDir])
+        print("perp", forcedMove, blockedForcedMove, isBlocked, perpendicularBlocked, this.dir, this.lastDir, this.queueDir, this.surroundingGridPaths[this.queueDir])
         //return
       } else {
         this.queueMove = false;
-        print("MOVE PERP")
+        //print("MOVE PERP")
       }
     }
 
-    if ((this.currentPointIndex === thisCenterIndex && isBlocked) || (perpendicularBlocked && this.x !== 200)) {
+    if (isBlocked && ((this.currentPointIndex === thisCenterIndex) || (perpendicularBlocked && !blockedForcedMove))) {
       if (!forcedMove) {
         indexDif = 0
         print("STOP", this.dir, this.queueDir, this.lastDir, this.x, this.y, this.currentPointIndex, thisCenterIndex, perpendicularBlocked, isPerpendicular)
@@ -190,7 +185,7 @@ class pac {
       if (isPerpendicular) { // if trying to turn onto a blocked tile, keep moving in the previous directiona
         this.dir = this.lastDir
         //forcedMove = false;
-        print(this.lastDir, this.queueDir, this.dir, this.nextGridPath, this.moveX, this.moveY)
+        //print(this.lastDir, this.queueDir, this.dir, this.nextGridPath, this.moveX, this.moveY)
       
       }
     
@@ -228,7 +223,7 @@ class pac {
     this.nextPointIndex = Math.max(0, Math.min(this.currentPointIndex + this.moveX + this.moveY, this.waypoints.length - 1))
     this.lastDir = this.dir
 
-    if (forcedMove) {
+    if (forcedMove || blockedForcedMove) {
       this.dir = this.queueDir
     }
 
