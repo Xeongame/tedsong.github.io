@@ -5,17 +5,57 @@
 // Extra for Experts:
 // - describe what you did to take this project "above and beyond"
 
-let columnNum = 20;
-let rowNum = 16;
+let columnNum = 27;
+let rowNum = 35;
 let spacing = 6;
 let border = 2;
-let length = 50;
+let length = 20;
 
 let pacX = 0;
 let pacY = 0;
 let pacSpeed = 5;
+let pacStartX = 5;
+let pacStartY = 9;
+
 let grids = [];
 let paths = [];
+let walls = ["111111111111111111111111111", // 1
+             "100000000000000000000000001", // 2
+             "100000000000000000000000001", // 3
+             "100000000000000000000000001", // 4
+             "100000000000000000000000001", // 5
+             "100000000000000000000000001", // 6
+             "100000000000000000000000001", // 7
+             "100000000000000000000000001", // 8
+             "100000000000000000000000001", // 9
+             "100000000000000000000000001", // 10
+             "100000000000000000000000001", // 11
+             "100000000000000000000000001", // 12
+             "111111000000000000000111111", // 13
+             "000001000000000000000100000", // 14
+             "000001000000000000000100000", // 15
+             "000001000000000000000100000", // 16
+             "111111000000000000000111111", // 17
+             "000000000000000000000000000", // 18
+             "111111000000000000000111111", // 19
+             "000001000000000000000100000", // 20
+             "000001000000000000000100000", // 21
+             "000001000000000000000100000", // 22
+             "111111000000000000000111111", // 23
+             "100000000000000000000000001", // 24
+             "100000000000000000000000001", // 25
+             "100000000000000000000000001", // 26
+             "100000000000000000000000001", // 27
+             "100000000000000000000000001", // 28
+             "100000000000000000000000001", // 29
+             "100000000000000000000000001", // 30
+             "100000000000000000000000001", // 31
+             "100000000000000000000000001", // 32
+             "100000000000000000000000001", // 33
+             "100000000000000000000000001", // 34
+             "111111111111111111111111111", // 35
+            ];
+
 let player 
 
 let debugColumn = 0;
@@ -248,8 +288,10 @@ function getGridCenter(array) {
 }
 
 function setup() {
-  createCanvas(windowWidth, windowHeight);
+  createCanvas(950, 948);
   frameRate(120)
+
+  // grids set up
   for (let x = 0; x < columnNum; x++) {
     for (let y = 0; y < rowNum; y++) {
       let row = grids[y] || [];
@@ -260,49 +302,55 @@ function setup() {
     }
   }
 
+  // path set up
   for (let x = 0; x < columnNum; x++) {
     for (let y = 0; y < rowNum; y++) {
       let row = paths[y] || [];
       let xPoints = []
       let yPoints = []
-      let centerX = x * length + length/2
-      let centerY = y * length + length/2
+      let centerX = x * length + length / 2
+      let centerY = y * length + length / 2
 
       if (x === 0) {
-        for (let i = centerX; i < centerX + length/2; i++) {
+        for (let i = centerX; i < centerX + length / 2; i++) {
           xPoints.push([i, centerY])
         }
       } else if (x === columnNum - 1) {
-        for (let i = centerX; i >= centerX - length/2; i--) {
+        for (let i = centerX; i >= centerX - length / 2; i--) {
           xPoints.unshift([i, centerY])
         }
       } else {
-        for (let i = centerX - length/2; i < centerX + length/2; i++) {
+        for (let i = centerX - length / 2; i < centerX + length / 2; i++) {
           xPoints.push([i, centerY])
         }
       }
 
       if (y === 0) {
-        for (let i = centerY; i < centerY + length/2; i++) {
+        for (let i = centerY; i < centerY + length / 2; i++) {
           yPoints.push([centerX, i])
         }
       } else if (y === rowNum - 1) {
-        for (let i = centerY; i >= centerY - length/2; i--) {
+        for (let i = centerY; i >= centerY - length / 2; i--) {
           yPoints.unshift([centerX, i])
         }
       } else {
-        for (let i = centerY - length/2; i < centerY + length/2; i++) {
+        for (let i = centerY - length / 2; i < centerY + length / 2; i++) {
           yPoints.push([centerX, i])
         }
       }
 
-      row[x] = [xPoints, yPoints, false]
+      // wall generation
+      let wallRow = walls[y]
+      let wallColumn = wallRow[x]
+      let blocked = wallColumn === "1"
+
+      row[x] = [xPoints, yPoints, blocked]
       paths[y] = row
     }
   }
 
   print(grids, paths)
-  player = new pac();
+  player = new pac(pacStartX, pacStartY);
 }
 
 function drawMap() {
@@ -358,7 +406,5 @@ function keyPressed() {
 }
 
 function mouseClicked() {
-  print(debugColumn, debugRow)
   paths[debugRow][debugColumn][2] = true; // adds a 'blocked' property to the grid for debugging
-  print(paths[debugRow][debugColumn])
 }
