@@ -5,7 +5,7 @@
 // Extra for Experts:
 // - describe what you did to take this project "above and beyond"
 
-let columnNum = 30;
+let columnNum = 28;
 let rowNum = 31;
 let spacing = 6;
 let border = 2;
@@ -92,8 +92,6 @@ class pac {
     this.moveY = 0
 
     let path = paths[this.row][this.column]
-    let lastDir = this.dir
-    let dirInt = 1;
 
     //print(this.column)
     if (this.dir === "right") { 
@@ -103,19 +101,18 @@ class pac {
     } else if (this.dir === "left") { 
       this.moveX = -pacSpeed
       this.axisIndex = 0
-      dirInt = -1
 
     } else if (this.dir === "up") { 
       this.moveY = -pacSpeed
       this.axisIndex = 1
-      dirInt = -1
 
     } else { 
       this.moveY = pacSpeed
       this.axisIndex = 1
     }
 
-    this.waypoints = path[this.axisIndex] // axisIndex determines the waypoints chosen based on direction: 0 = moving on the x axis, 1 = moving on the y axis
+    // axisIndex determines the chosen waypoints: 0 = moving on the x axis, 1 = moving on the y axis
+    this.waypoints = path[this.axisIndex] 
 
     for (let i = 0; i < this.waypoints.length; i++) {
       let x = this.waypoints[i][0]
@@ -229,18 +226,14 @@ class pac {
         this.dir = this.lastDir
       }
     } 
-
-    print(this.nextWaypoints)
-
+    
     // handles moving out of current grid
     if (indexDif <= pacSpeed && (!isBlocked || (isBlocked && isPerpendicular && !perpendicularBlocked))) { 
       if (this.moveX !== 0) { //moving on the x axis
-        if (paths[this.row][this.column + dirInt]) {
-          this.column += dirInt
+        this.column += dirInt
           this.waypoints = this.nextWaypoints
           this.moveX -= indexDif * dirInt
           isLeaving = true
-        }
         
       } else { //moving on the y axis
         if (paths[this.row + dirInt]) {
@@ -250,6 +243,12 @@ class pac {
           isLeaving = true
 
         }
+      }
+
+      if (this.column >= columnNum - 1) {
+       this.column = 0
+      } else if (this.column < 0) {
+        this.column = columnNum - 1
       }
 
       if (isLeaving) { // if there is a new grid to move into
@@ -268,7 +267,6 @@ class pac {
     if (forcedMove || blockedForcedMove) {
       this.dir = this.queueDir
     }
-
 
     // move
     let nextPoint = this.waypoints[this.nextPointIndex]
@@ -315,32 +313,12 @@ function setup() {
       let centerX = x * length + length / 2
       let centerY = y * length + length / 2
 
-      if (x === 0) {
-        for (let i = centerX; i < centerX + length / 2; i++) {
-          xPoints.push([i, centerY])
-        }
-      } else if (x === columnNum - 1) {
-        for (let i = centerX; i >= centerX - length / 2; i--) {
-          xPoints.unshift([i, centerY])
-        }
-      } else {
-        for (let i = centerX - length / 2; i < centerX + length / 2; i++) {
-          xPoints.push([i, centerY])
-        }
+      for (let i = x * length; i < centerX + length / 2; i++) {
+        xPoints.push([i, centerY])
       }
 
-      if (y === 0) {
-        for (let i = centerY; i < centerY + length / 2; i++) {
-          yPoints.push([centerX, i])
-        }
-      } else if (y === rowNum - 1) {
-        for (let i = centerY; i >= centerY - length / 2; i--) {
-          yPoints.unshift([centerX, i])
-        }
-      } else {
-        for (let i = centerY - length / 2; i < centerY + length / 2; i++) {
-          yPoints.push([centerX, i])
-        }
+      for (let i = y * length; i < centerY + length / 2; i++) {
+        yPoints.push([centerX, i])
       }
 
       // wall generation
