@@ -5,58 +5,60 @@
 // Extra for Experts:
 // - describe what you did to take this project "above and beyond"
 
-let columnNum = 27;
-let rowNum = 35;
+let columnNum = 30;
+let rowNum = 31;
 let spacing = 6;
 let border = 2;
-let length = 20;
+let length = 24;
 
 let pacX = 0;
 let pacY = 0;
-let pacSpeed = 5;
-let pacStartX = 5;
-let pacStartY = 9;
+let pacSpeed = 4;
+let pacStartColumn = 21;
+let pacStartRow = 14;
 
 let grids = [];
 let paths = [];
-let walls = ["111111111111111111111111111", // 1
-             "100000000000000000000000001", // 2
-             "100000000000000000000000001", // 3
-             "100000000000000000000000001", // 4
-             "100000000000000000000000001", // 5
-             "100000000000000000000000001", // 6
-             "100000000000000000000000001", // 7
-             "100000000000000000000000001", // 8
-             "100000000000000000000000001", // 9
-             "100000000000000000000000001", // 10
-             "100000000000000000000000001", // 11
-             "100000000000000000000000001", // 12
-             "111111000000000000000111111", // 13
-             "000001000000000000000100000", // 14
-             "000001000000000000000100000", // 15
-             "000001000000000000000100000", // 16
-             "111111000000000000000111111", // 17
-             "000000000000000000000000000", // 18
-             "111111000000000000000111111", // 19
-             "000001000000000000000100000", // 20
-             "000001000000000000000100000", // 21
-             "000001000000000000000100000", // 22
-             "111111000000000000000111111", // 23
-             "100000000000000000000000001", // 24
-             "100000000000000000000000001", // 25
-             "100000000000000000000000001", // 26
-             "100000000000000000000000001", // 27
-             "100000000000000000000000001", // 28
-             "100000000000000000000000001", // 29
-             "100000000000000000000000001", // 30
-             "100000000000000000000000001", // 31
-             "100000000000000000000000001", // 32
-             "100000000000000000000000001", // 33
-             "100000000000000000000000001", // 34
-             "111111111111111111111111111", // 35
+let walls = ["1111111111111111111111111111", // 1
+             "1000000000000110000000000001", // 2
+             "1011110111110110111110111101", // 3
+             "1011110111110110111110111101", // 4
+             "1011110111110110111110111101", // 5
+             "1000000000000000000000000001", // 6
+             "1011110110111111110110111101", // 7
+             "1011110110111111110110111101", // 8
+             "1000000110000110000110000001", // 9
+             "1111110111110110111110111111", // 10
+             "0000010111110110111110100000", // 11
+             "0000010110000000000110100000", // 12
+             "0000010110111001110110100000", // 13
+             "1111110110100000010110111111", // 14
+             "0000000000100000010000000000", // 15
+             "1111110110100000010110111111", // 16
+             "0000010110111111110110100000", // 17
+             "0000010110000000000110100000", // 18
+             "0000010110111111110110100000", // 19
+             "1111110110111111110110111111", // 20
+             "1000000000000110000000000001", // 21
+             "1011110111110110111110111101", // 22
+             "1011110111110110111110111101", // 23
+             "1000110000000000000000110001", // 24
+             "1110110110111111110110110111", // 25
+             "1110110110111111110110110111", // 26
+             "1000000110000110000110000001", // 27
+             "1011111111110110111111111101", // 28
+             "1011111111110110111111111101", // 29
+             "1000000000000000000000000001", // 30
+             "1111111111111111111111111111", // 31
+             "1000000000000000000000000001", // 32
+             "1000000000000000000000000001", // 33
+             "1000000000000000000000000001", // 34
+             "1000000000000000000000000001", // 35
+             "1111111111111111111111111111", // 36
             ];
 
 let player 
+let gameStart = false;
 
 let debugColumn = 0;
 let debugRow = 0;
@@ -69,7 +71,7 @@ class pac {
     this.moveY = 0;
     let grid = grids[this.row][this.column]
   
-    this.x = grid[0] + length/2
+    this.x = grid[0]
     this.y = grid[1] + length/2
 
     this.dir = "right";
@@ -127,6 +129,8 @@ class pac {
     // locate surrounding grids
     if (paths[this.row][this.column + 1]) {
       this.surroundingGridPaths.right = paths[this.row][this.column + 1]
+    } else {
+      this.surroundingGridPaths.right = paths[this.row][0]
     }
 
     if (paths[this.row][this.column - 1]) {
@@ -151,20 +155,17 @@ class pac {
       } else { //moving on the y axis
         this.nextWaypoints = this.nextGridPath[1]   
       }
-  
-    }
-   
-    if (!this.nextWaypoints) {
-      this.dir = lastDir
-      this.locate()
     }
   }
 
   move() {
     this.locate()
 
-    let dirInt = (this.moveX + this.moveY)/Math.abs(this.moveX + this.moveY) // positive = moving left to right or top to bottom, negative = moving right to left or bottom to top
-    let indexDif = (dirInt > 0) && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1 //calculates difference of steps from the next grid 
+    // positive = moving left to right or top to bottom, negative = moving right to left or bottom to top
+    let dirInt = (this.moveX + this.moveY)/Math.abs(this.moveX + this.moveY) 
+
+    //calculates difference of steps from the next grid 
+    let indexDif = (dirInt > 0) && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1 
 
     // checks if direction changed in a perpendicular direction, ex: previously moving up and now changing directions to move left
     let isPerpendicular = ((this.dir === "up" || this.dir === "down") && (this.lastDir === "right" || this.lastDir === "left")) || (this.dir === "left" || this.dir === "right") && (this.lastDir === "up" || this.lastDir === "down")
@@ -172,23 +173,22 @@ class pac {
     let isBlocked = this.nextGridPath[2];
     let perpendicularBlocked = isPerpendicular && this.queuedGridPath[2]
     let isLeaving = false;
-    let forcedMove = false; // forces moving in the old direction when trying to change directions at the wrong time
+    let forcedMove = false; // QUEUED MOVEMENT: forces movement in the old direction when failing to change directions
     let blockedForcedMove = false;
 
+    // position variables
     let nextCenterIndex = getGridCenter(this.nextWaypoints)
     let thisCenterIndex = getGridCenter(this.waypoints)
-    let perpendicularMoveCenterIndex = getGridCenter(this.surroundingGridPaths[this.dir][this.axisIndex])
-  
     let nextCenter = this.nextWaypoints[nextCenterIndex]
     let thisCenter = this.waypoints[thisCenterIndex]
 
-    // handles changing direction for perpendicular movement: can only change directions if at the middle of the grid
+    // handles QUEUED MOVEMENT and changing direction for perpendicular movement: can only change directions if at the middle of the grid
     if (this.lastDir !== this.dir && isPerpendicular) {
       if ((this.currentPointIndex - thisCenterIndex) * dirInt <= 0) {
         nextCenter = thisCenter
       }
 
-      // debounce statement: forces the player to move in the old direction if not at middle or the next grid is blocked
+      // debounce statement: forces movement in the old direction if not at middle or the next grid is blocked
       if (this.x !== nextCenter[0] || this.y !== nextCenter[1] || (isBlocked)) {
        // relocate using the old direction
         this.queueDir = this.dir
@@ -197,23 +197,26 @@ class pac {
 
         let doubleCheck = perpendicularBlocked;
         this.queueMove = true;
-        perpendicularBlocked = this.nextGridPath[2]; //check the next grid 
-        forcedMove = !perpendicularBlocked;
+        perpendicularBlocked = this.nextGridPath[2]; //checks the next grid 
+        forcedMove = !perpendicularBlocked; // cancels QUEUED MOVEMENT if no unblocked path is available 
 
         if (doubleCheck || !forcedMove) {
            blockedForcedMove = true;
         }
 
+        // redirects the movement variables 
         dirInt = (this.moveX + this.moveY)/Math.abs(this.moveX + this.moveY)
         indexDif = (dirInt > 0) && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1
         print("perp", forcedMove, blockedForcedMove, isBlocked, perpendicularBlocked, this.dir, this.lastDir, this.queueDir, this.surroundingGridPaths[this.queueDir])
-        //return
-      } else {
-        this.queueMove = false;
+
+      // if all conditions are satisfied, cancel QUEUED MOVEMENT and start to move
+      } else { 
+        this.queueMove = false; 
         //print("MOVE PERP")
       }
     }
 
+    // handles colllision and corner turning
     if (isBlocked && ((this.currentPointIndex === thisCenterIndex) || (perpendicularBlocked && !blockedForcedMove))) {
       if (!forcedMove) {
         indexDif = 0
@@ -222,17 +225,15 @@ class pac {
         this.moveY = 0;
       }
       
-      if (isPerpendicular) { // if trying to turn onto a blocked tile, keep moving in the previous directiona
+      if (isPerpendicular) { // if trying to turn onto a blocked tile, keep moving in the previous direction
         this.dir = this.lastDir
-        //forcedMove = false;
-        //print(this.lastDir, this.queueDir, this.dir, this.nextGridPath, this.moveX, this.moveY)
-      
       }
-    
     } 
-    
-    if (indexDif <= pacSpeed && (!isBlocked || (isBlocked && isPerpendicular && !perpendicularBlocked))) { //moving out of current grid
-      
+
+    print(this.nextWaypoints)
+
+    // handles moving out of current grid
+    if (indexDif <= pacSpeed && (!isBlocked || (isBlocked && isPerpendicular && !perpendicularBlocked))) { 
       if (this.moveX !== 0) { //moving on the x axis
         if (paths[this.row][this.column + dirInt]) {
           this.column += dirInt
@@ -251,8 +252,8 @@ class pac {
         }
       }
 
-      if (isLeaving) { //if there is a new grid to move into
-        if (dirInt > 0) { //assign new position based on moving direction
+      if (isLeaving) { // if there is a new grid to move into
+        if (dirInt > 0) { // assigns a new position based on moving direction
           this.currentPointIndex = 0;
         } else {
           this.currentPointIndex = this.waypoints.length - 1;
@@ -263,10 +264,13 @@ class pac {
     this.nextPointIndex = Math.max(0, Math.min(this.currentPointIndex + this.moveX + this.moveY, this.waypoints.length - 1))
     this.lastDir = this.dir
 
+    // changes the next direction to be the same as QUEUED MOVEMENT
     if (forcedMove || blockedForcedMove) {
       this.dir = this.queueDir
     }
 
+
+    // move
     let nextPoint = this.waypoints[this.nextPointIndex]
     this.x = nextPoint[0]
     this.y = nextPoint[1]
@@ -350,7 +354,7 @@ function setup() {
   }
 
   print(grids, paths)
-  player = new pac(pacStartX, pacStartY);
+  player = new pac(pacStartRow, pacStartColumn);
 }
 
 function drawMap() {
@@ -389,19 +393,26 @@ function draw() {
   
   drawMap()
   debug()
+
   player.show()
-  player.move()
+
+  if (gameStart) {
+    player.move()
+  }
+  
 }
 
 function keyPressed() {
-  if (key === "w") {
+  if (key === "w" || keyCode === UP_ARROW) {
     player.dir = "up"
-  } else if (key === "s") {
+  } else if (key === "s" || keyCode === DOWN_ARROW) {
     player.dir = "down"
-  } else if (key === "a") {
+  } else if (key === "a" || keyCode === LEFT_ARROW) {
     player.dir = "left"
-  } else if (key === "d") {
+  } else if (key === "d" || keyCode === RIGHT_ARROW) {
     player.dir = "right"
+  } else if (key === "t") {
+    gameStart = true;
   }
 }
 
