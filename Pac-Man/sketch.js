@@ -13,8 +13,8 @@ let length = 24;
 
 let pacX = 0;
 let pacY = 0;
-let pacSpeed = 4;
-let pacStartColumn = 21;
+let pacSpeed = 2;
+let pacStartColumn = 1;
 let pacStartRow = 14;
 
 let grids = [];
@@ -49,19 +49,143 @@ let walls = ["1111111111111111111111111111", // 1
              "1011111111110110111111111101", // 28
              "1011111111110110111111111101", // 29
              "1000000000000000000000000001", // 30
-             "1111111111111111111111111111", // 31
-             "1000000000000000000000000001", // 32
-             "1000000000000000000000000001", // 33
-             "1000000000000000000000000001", // 34
-             "1000000000000000000000000001", // 35
-             "1111111111111111111111111111", // 36
+             "1_11111111111111111111111111", // 31
             ];
 
 let player 
 let gameStart = false;
 
+let debugWalls = true;
 let debugColumn = 0;
 let debugRow = 0;
+
+let mapSprite
+
+function getGridCenterIndex(array) {
+  let index = array.length - 1;
+
+  if (array.length % (length/2) === 0) {
+    index = array.length - length/2
+  }
+
+  return index
+}
+
+function preload() {
+  mapSprite = loadImage('assets/map.png')
+}
+
+function setup() {
+  createCanvas(950, 918);
+  frameRate(120)
+  
+  // grids set up
+  for (let x = 0; x < columnNum; x++) {
+    for (let y = 0; y < rowNum; y++) {
+      let row = grids[y] || [];
+      let column = [x * length, y * length]
+
+      row[x] = column
+      grids[y] = row
+    }
+  }
+
+  // path set up
+  for (let x = 0; x < columnNum; x++) {
+    for (let y = 0; y < rowNum; y++) {
+      let row = paths[y] || [];
+      let xPoints = []
+      let yPoints = []
+      let centerX = x * length + length / 2
+      let centerY = y * length + length / 2
+
+      for (let i = x * length; i < centerX + length / 2; i++) {
+        xPoints.push([i, centerY])
+      }
+
+      for (let i = y * length; i < centerY + length / 2; i++) {
+        yPoints.push([centerX, i])
+      }
+
+      // wall generation
+      let wallRow = walls[y]
+      let wallColumn = wallRow[x]
+      let blocked = wallColumn !== "0"
+
+      row[x] = [xPoints, yPoints, blocked, wallColumn]
+      paths[y] = row
+    }
+  }
+
+  print(grids, paths)
+  player = new pac(pacStartRow, pacStartColumn);
+}
+
+function drawMap() {
+  for (let row = 0; row < grids.length; row++) {
+    for (let column = 0; column < grids[row].length; column ++) {
+      stroke(0, 0, 255)
+      strokeWeight(border);
+
+      let x = grids[row][column][0]
+      let y = grids[row][column][1]
+      let blocked = paths[row][column][2]
+      let gridType = paths[row][column][3]
+
+      fill(0)
+      if (blocked && debugWalls) {
+        fill(255, 0, 0);
+      }
+
+      rect(x, y, length, length)
+
+      stroke (0, 0, 255)
+      strokeWeight(border)
+    }
+  }
+
+  image(mapSprite, -length * columnNum / 2, 0, length * columnNum * 2 + 2, length * rowNum)
+}
+
+function debug() {
+  debugColumn = Math.floor(mouseX / length)
+  debugRow = Math.floor(mouseY / length)
+}
+
+function draw() {
+  translate(50, 50)
+  background(0);
+  
+  drawMap()
+  debug()
+
+  player.show()
+
+  if (gameStart) {
+    player.move()
+  }
+}
+
+function keyPressed() {
+  if (key === "w" || keyCode === UP_ARROW) {
+    player.dir = "up"
+  } else if (key === "s" || keyCode === DOWN_ARROW) {
+    player.dir = "down"
+  } else if (key === "a" || keyCode === LEFT_ARROW) {
+    player.dir = "left"
+  } else if (key === "d" || keyCode === RIGHT_ARROW) {
+    player.dir = "right"
+  } else if (key === " ") {
+    gameStart = true;
+  } else if (key === "y") { // debug key
+    player.move()
+    player.show()
+  }
+}
+
+function mouseClicked() {
+  paths[debugRow][debugColumn][2] = true; // adds a 'blocked' property to the grid for debugging
+}
 
 class pac {
   constructor(row, column) {
@@ -126,12 +250,14 @@ class pac {
     // locate surrounding grids
     if (paths[this.row][this.column + 1]) {
       this.surroundingGridPaths.right = paths[this.row][this.column + 1]
-    } else {
+    } else { 
       this.surroundingGridPaths.right = paths[this.row][0]
     }
 
     if (paths[this.row][this.column - 1]) {
       this.surroundingGridPaths.left = paths[this.row][this.column - 1]
+    } else {
+      this.surroundingGridPaths.left = paths[this.row][columnNum - 1]
     }
 
     if (paths[this.row + 1]) {
@@ -169,13 +295,12 @@ class pac {
 
     let isBlocked = this.nextGridPath[2];
     let perpendicularBlocked = isPerpendicular && this.queuedGridPath[2]
-    let isLeaving = false;
     let forcedMove = false; // QUEUED MOVEMENT: forces movement in the old direction when failing to change directions
     let blockedForcedMove = false;
 
     // position variables
-    let nextCenterIndex = getGridCenter(this.nextWaypoints)
-    let thisCenterIndex = getGridCenter(this.waypoints)
+    let nextCenterIndex = getGridCenterIndex(this.nextWaypoints)
+    let thisCenterIndex = getGridCenterIndex(this.waypoints)
     let nextCenter = this.nextWaypoints[nextCenterIndex]
     let thisCenter = this.waypoints[thisCenterIndex]
 
@@ -204,7 +329,7 @@ class pac {
         // redirects the movement variables 
         dirInt = (this.moveX + this.moveY)/Math.abs(this.moveX + this.moveY)
         indexDif = (dirInt > 0) && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1
-        print("perp", forcedMove, blockedForcedMove, isBlocked, perpendicularBlocked, this.dir, this.lastDir, this.queueDir, this.surroundingGridPaths[this.queueDir])
+        //print("perp", forcedMove, blockedForcedMove, isBlocked, perpendicularBlocked, this.dir, this.lastDir, this.queueDir, this.surroundingGridPaths[this.queueDir])
 
       // if all conditions are satisfied, cancel QUEUED MOVEMENT and start to move
       } else { 
@@ -217,7 +342,7 @@ class pac {
     if (isBlocked && ((this.currentPointIndex === thisCenterIndex) || (perpendicularBlocked && !blockedForcedMove))) {
       if (!forcedMove) {
         indexDif = 0
-        print("STOP", this.dir, this.queueDir, this.lastDir, this.x, this.y, this.currentPointIndex, thisCenterIndex, perpendicularBlocked, isPerpendicular)
+        //print("STOP", this.dir, this.queueDir, this.lastDir, this.x, this.y, this.currentPointIndex, thisCenterIndex, perpendicularBlocked, isPerpendicular)
         this.moveX = 0;
         this.moveY = 0;
       }
@@ -229,34 +354,27 @@ class pac {
     
     // handles moving out of current grid
     if (indexDif <= pacSpeed && (!isBlocked || (isBlocked && isPerpendicular && !perpendicularBlocked))) { 
+      this.waypoints = this.nextWaypoints
+
       if (this.moveX !== 0) { //moving on the x axis
         this.column += dirInt
-          this.waypoints = this.nextWaypoints
-          this.moveX -= indexDif * dirInt
-          isLeaving = true
-        
+        this.moveX -= indexDif * dirInt
       } else { //moving on the y axis
-        if (paths[this.row + dirInt]) {
-          this.row += dirInt
-          this.waypoints = this.nextWaypoints
-          this.moveY -= indexDif * dirInt
-          isLeaving = true
-
-        }
+        this.row += dirInt
+        this.moveY -= indexDif * dirInt
       }
 
-      if (this.column >= columnNum - 1) {
-       this.column = 0
+      // move to the other side of the map if in the warp zone (the open middle passage)
+      if (this.column > columnNum - 1) { 
+        this.column = 0
       } else if (this.column < 0) {
         this.column = columnNum - 1
       }
 
-      if (isLeaving) { // if there is a new grid to move into
-        if (dirInt > 0) { // assigns a new position based on moving direction
-          this.currentPointIndex = 0;
-        } else {
-          this.currentPointIndex = this.waypoints.length - 1;
-        }
+      if (dirInt > 0) { // assigns a new position in the new grid based on moving direction
+        this.currentPointIndex = 0;
+      } else {
+        this.currentPointIndex = this.waypoints.length - 1;
       }
     }
 
@@ -277,123 +395,4 @@ class pac {
 
 class ghost {
 
-}
-
-function getGridCenter(array) {
-  let index = array.length - 1;
-
-  if (array.length % (length/2) === 0) {
-    index = array.length - length/2
-  }
-
-  return index
-}
-
-function setup() {
-  createCanvas(950, 948);
-  frameRate(120)
-
-  // grids set up
-  for (let x = 0; x < columnNum; x++) {
-    for (let y = 0; y < rowNum; y++) {
-      let row = grids[y] || [];
-      let column = [x * length, y * length]
-
-      row[x] = column
-      grids[y] = row
-    }
-  }
-
-  // path set up
-  for (let x = 0; x < columnNum; x++) {
-    for (let y = 0; y < rowNum; y++) {
-      let row = paths[y] || [];
-      let xPoints = []
-      let yPoints = []
-      let centerX = x * length + length / 2
-      let centerY = y * length + length / 2
-
-      for (let i = x * length; i < centerX + length / 2; i++) {
-        xPoints.push([i, centerY])
-      }
-
-      for (let i = y * length; i < centerY + length / 2; i++) {
-        yPoints.push([centerX, i])
-      }
-
-      // wall generation
-      let wallRow = walls[y]
-      let wallColumn = wallRow[x]
-      let blocked = wallColumn === "1"
-
-      row[x] = [xPoints, yPoints, blocked]
-      paths[y] = row
-    }
-  }
-
-  print(grids, paths)
-  player = new pac(pacStartRow, pacStartColumn);
-}
-
-function drawMap() {
-  stroke(0, 0, 255)
-  
-  strokeWeight(border);
-
-  for (let row = 0; row < grids.length; row++) {
-    for (let column = 0; column < grids[row].length; column ++) {
-      let x = grids[row][column][0]
-      let y = grids[row][column][1]
-      let pathBlocked = paths[row][column][2]
-      //print(paths[row][column])
-      
-      fill(0)
-      if (pathBlocked) {
-        fill(255, 0, 0);
-      }
-  
-      //print(grids[row][column])
-      rect(x, y, length, length)
-    }
-  }
-}
-
-function debug() {
-  //print(mouseX, mouseY)
-
-  debugColumn = Math.floor(mouseX / length)
-  debugRow = Math.floor(mouseY / length)
-
-}
-
-function draw() {
-  background(0);
-  
-  drawMap()
-  debug()
-
-  player.show()
-
-  if (gameStart) {
-    player.move()
-  }
-  
-}
-
-function keyPressed() {
-  if (key === "w" || keyCode === UP_ARROW) {
-    player.dir = "up"
-  } else if (key === "s" || keyCode === DOWN_ARROW) {
-    player.dir = "down"
-  } else if (key === "a" || keyCode === LEFT_ARROW) {
-    player.dir = "left"
-  } else if (key === "d" || keyCode === RIGHT_ARROW) {
-    player.dir = "right"
-  } else if (key === "t") {
-    gameStart = true;
-  }
-}
-
-function mouseClicked() {
-  paths[debugRow][debugColumn][2] = true; // adds a 'blocked' property to the grid for debugging
 }
