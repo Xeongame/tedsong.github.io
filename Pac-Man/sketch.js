@@ -7,15 +7,19 @@
 
 let columnNum = 28;
 let rowNum = 31;
+
 let spacing = 6;
 let border = 2;
 let length = 24;
 
 let pacX = 0;
 let pacY = 0;
-let pacSpeed = 2;
+let pacSpeed = 3;
 let pacStartColumn = 1;
 let pacStartRow = 14;
+
+let canvasX = 950
+let canvasY = 918
 
 let grids = [];
 let paths = [];
@@ -60,6 +64,8 @@ let debugColumn = 0;
 let debugRow = 0;
 
 let mapSprite
+let pacSprites = []
+let spriteDir = ["right", "left", "down", "up"]
 
 function getGridCenterIndex(array) {
   let index = array.length - 1;
@@ -73,12 +79,24 @@ function getGridCenterIndex(array) {
 
 function preload() {
   mapSprite = loadImage('assets/map.png')
+
+  for (let d = 0; d < 4; d++) {
+    let dir = spriteDir[d]
+    pacSprites[dir] = []
+
+    for (let i = 0; i < 3; i++) {
+      let sprite = loadImage('assets/' + dir + 'pacman' + i + '.png')
+      pacSprites[dir][i] = sprite
+    }
+  }
 }
 
 function setup() {
-  createCanvas(950, 918);
+  createCanvas(canvasX, canvasY);
+  imageMode(CENTER)
   frameRate(120)
-  
+  angleMode(DEGREES)
+
   // grids set up
   for (let x = 0; x < columnNum; x++) {
     for (let y = 0; y < rowNum; y++) {
@@ -122,6 +140,8 @@ function setup() {
 }
 
 function drawMap() {
+  image(mapSprite, length * columnNum / 2, length * rowNum / 2, length * columnNum, length * rowNum)
+
   for (let row = 0; row < grids.length; row++) {
     for (let column = 0; column < grids[row].length; column ++) {
       stroke(0, 0, 255)
@@ -130,21 +150,18 @@ function drawMap() {
       let x = grids[row][column][0]
       let y = grids[row][column][1]
       let blocked = paths[row][column][2]
-      let gridType = paths[row][column][3]
 
       fill(0)
       if (blocked && debugWalls) {
         fill(255, 0, 0);
       }
 
-      rect(x, y, length, length)
-
-      stroke (0, 0, 255)
-      strokeWeight(border)
+      noFill()
+      //rect(x, y, length, length)
     }
   }
 
-  image(mapSprite, -length * columnNum / 2, 0, length * columnNum * 2 + 2, length * rowNum)
+ 
 }
 
 function debug() {
@@ -153,7 +170,7 @@ function debug() {
 }
 
 function draw() {
-  translate(50, 50)
+  translate(canvasX / 2 - (length * columnNum / 2), canvasY / 2 - (length * rowNum / 2))
   background(0);
   
   drawMap()
@@ -193,8 +210,9 @@ class pac {
     this.column = column || 0;
     this.moveX = 0;
     this.moveY = 0;
+    this.spriteId = 0;
+
     let grid = grids[this.row][this.column]
-  
     this.x = grid[0]
     this.y = grid[1] + length/2
 
@@ -208,7 +226,16 @@ class pac {
 
   show() {
     fill(255, 255, 0);
-    circle(this.x, this.y, length * 0.8);
+    //circle(this.x, this.y, length * 0.8);
+    image(pacSprites[this.lastDir][Math.floor(this.spriteId)], this.x, this.y, length * 2, length * 2)
+
+    if (this.moveX + this.moveY !== 0) { // cycles through sprite every 4 frames when moving
+      this.spriteId += 0.25
+    }
+
+    if (this.spriteId >= 3) {
+      this.spriteId = 0;
+    }
   }
 
   locate() {
