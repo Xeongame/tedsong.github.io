@@ -21,10 +21,10 @@ let pacSpeed = 3;
 let ghostSpeed = 3;
 let ghostFrightenedSpeed = 2;
 let ghostWarpZoneSpeed = 2;
-let ghostIdleSpeed = 2;
+let ghostDeadSpeed = 6;
 
 let chaseDuration = 255;
-let energizedDuration = 5;
+let energizedDuration = 8;
 let scatterDuration = 7;
 let maxScatterNumber = 4;
 
@@ -132,9 +132,9 @@ function preload() {
   // ghost sprites
   for (let s = 0; s < 3; s++) {
     let status = statuses[s]
-    ghostSprites[status] = []
+    ghostSprites[status] = [1]
 
-    if (status === "normal") {
+    if (status === "normal") {  
       for (let d = 0; d < 4; d++) {
         let dir = directions[d]
         ghostSprites[status][dir] = []
@@ -149,10 +149,24 @@ function preload() {
           }
         }
       }
+    } else if (status === "scared") {
+      let w0 = loadImage('assets/whitefearghost0.png')
+      let w1 = loadImage('assets/whitefearghost1.png')
+      let b0 = loadImage('assets/bluefearghost0.png')
+      let b1 = loadImage('assets/bluefearghost1.png')
+
+
+      ghostSprites[status]["blue"] = [b0, b1]  
+      ghostSprites[status]["white"] = [w0, w1]     
+    } else if (status === "dead") {
+      for (let d = 0; d < 4; d++) {
+        let dir = directions[d]
+        let sprite = loadImage('assets/dead' + dir + '.png')
+          
+        ghostSprites[status][dir] = sprite
+      }
     }
   }
-
-  ghostSprites["scared"] = []
 }
 
 function setup() {
@@ -230,7 +244,7 @@ function drawMap() {
         }
   
         noFill()
-        rect(x, y, length, length)
+        //rect(x, y, length, length)
   
         if (type === "0" && !info) { // dots
           image(dotSprite, x + length / 2, y + length / 2, length * 2, length * 2)
@@ -508,6 +522,7 @@ class ghost {
     this.moveX = 0;
     this.moveY = 0;
     this.spriteId = 0;
+    this.spriteId2 = 0;
     this.state = "idle"
     this.dir = "up";
     this.lastDir = "right";
@@ -576,21 +591,27 @@ class ghost {
   show() {
     fill(this.color);
     circle(this.x, this.y, length * 0.8);
-    rect(this.targetX, this.targetY, length * 0.5, length * 0.5)
+    //rect(this.targetX, this.targetY, length * 0.5, length * 0.5)
     
     if (this.state === "frightened") {
-      image(ghostSprites["scared"][this.lastDir][this.code][Math.floor(this.spriteId)], this.x, this.y, length * 2, length * 2)
+      let color = player.energizedTime / fps < 2 && this.spriteId2 - Math.floor(this.spriteId2) > 0.5 && "white" || "blue"; 
+
+      // uses blue sprites until energized time is less than 2, then begin flashing white as warning 
+      image(ghostSprites["scared"][color][Math.floor(this.spriteId)], this.x, this.y, length * 2, length * 2)
+    } else if (this.state === "dead" || this.state === "enterIdle") {
+      image(ghostSprites["dead"][this.lastDir], this.x, this.y, length * 2, length * 2)
     } else {
-      image(ghostSprites["normal"][this.lastDir][this.code][Math.floor(this.spriteId)], this.x, this.y, length * 2, length * 2)
+      image(ghostSprites["normal"][this.lastDir][this.code][Math.floor(this.spriteId)], this.x, this.y, length * 2, length * 2) // regular sprites
     }
-    
 
     if (gameStart) {
-      this.spriteId += 0.25
+      this.spriteId += 0.125
+      this.spriteId2 += 0.05
     }
 
     if (this.spriteId >= 2) {
       this.spriteId = 0;
+      this.spriteId2 = 0
     }
   }
 
@@ -668,6 +689,16 @@ class ghost {
   
       this.targetX = targetGrid[0][0][0]
       this.targetY = targetGrid[1][1][1]
+    } else if (this.state === "dead") { // return to ghost house to revive
+      let targetGrid = paths[11][14]
+  
+      this.targetX = targetGrid[0][0][0]
+      this.targetY = targetGrid[1][1][1]
+
+      print(this.row, this.column, this.currentPointIndex, this.nextWaypoints, this.waypoints, this.x)
+      if (this.row === 11 && this.column === 14 && this.nextPointIndex === 0) { // at the entrance of the ghost house
+        this.changeState("enterIdle")
+      }
     }
 
     let path = paths[this.row][this.column]
@@ -703,7 +734,9 @@ class ghost {
     if (this.state === "frightened") {
       this.speed = ghostFrightenedSpeed;
     } else if (this.state === "idle") {
-      this.speed = ghostIdleSpeed
+      this.speed = ghostWarpZoneSpeed
+    } else if (this.state === "dead") {
+      this.speed = ghostDeadSpeed
     }
 
     //print(this.column)
@@ -750,6 +783,7 @@ class ghost {
     this.locate() 
     this.lastDir = this.dir
 
+    // print(this.state)
     // positive = moving left to right or top to bottom, negative = moving right to left or bottom to top
     let dirInt = (this.moveX + this.moveY)/Math.abs(this.moveX + this.moveY) 
 
@@ -774,10 +808,11 @@ class ghost {
         this.changeState("leaveIdle")
       }
     } else if (this.state === "leaveIdle") { // moving out of ghost house
-      let ghostExit = paths[11][14][0][0] // the grid right outside the ghost house
-      let exitX = ghostExit[0]
-      let exitY = ghostExit[1]
+      let exit = paths[11][14][0][0] // the grid right outside the ghost house
+      let exitX = exit[0]
+      let exitY = exit[1]
 
+      print(exitX, this.x, this.y, exitY)
       if (this.x !== exitX) {
         this.x += this.moveX
         
@@ -790,16 +825,29 @@ class ghost {
         this.dir = "up"
         this.y += this.moveY
       } else { // set up for scatter phase
+        print("SD")
         this.row = 11
         this.column = 14
         this.changeState("scatter")
+        this.lastScatterTime -= 4 * fps // briefly enter scatter mode
 
         this.locate()
         this.dir = this.queueDir
       }
+    } else if (this.state === "enterIdle") {
+      let entrance = paths[14][14][0][0] // the grid right outside the ghost house
+      let y = entrance[1]
+      this.idleTime = 0
+
+      if (this.y !== y) { // moving until y coordinates match
+        this.dir = "down"
+        this.y += this.moveY
+      } else { // restart in idle mode
+        this.changeState("idle")
+      }
     } else { // moves towards target grid
       // moving out of current grid
-      if (indexDif < this.speed) { 
+      if (indexDif <= this.speed) { 
         this.waypoints = this.nextWaypoints
 
         if (this.moveX !== 0) { //moving on the x axis
@@ -826,7 +874,7 @@ class ghost {
 
       this.nextPointIndex = Math.max(0, Math.min(this.currentPointIndex + this.moveX + this.moveY, this.waypoints.length - 1))
 
-      print(this.queueDir, this.dir, this.waiting, this.nextPointIndex, this.currentPointIndex, this.moveX, this.surroundingGridPaths, this.waypoints, this.nextGridPath)
+     // print(this.queueDir, this.dir, this.waiting, this.nextPointIndex, this.currentPointIndex, this.moveX, this.surroundingGridPaths, this.waypoints, this.nextGridPath)
       // move
       let nextPoint = this.waypoints[this.nextPointIndex]
       let thisCenterIndex = getGridCenterIndex(this.waypoints)
@@ -834,6 +882,18 @@ class ghost {
       if (!this.waiting) {
         this.x = nextPoint[0]
         this.y = nextPoint[1]
+      }
+
+      // collision
+      let distX = Math.abs(player.x - this.x)
+      let distY = Math.abs(player.y - this.y)
+      let dist = distX + distY
+
+      if (dist <= length) { // touching player
+        if (this.state === "frightened") {
+          this.changeState("dead")
+        }
+        //gameStart =false
       }
      
        // change direction when at the middle of current grid
@@ -871,12 +931,11 @@ class ghost {
           this.changeState("frightened")
         } 
       } else if (!player.energized && this.state === "frightened") { // leave frightened mode and re-enter whatever state it was before
-        print("SDD")
         this.changeState(this.lastState)
       } else {
-        if (scatterDif > scatterDuration && this.state === "scatter") { // enter chase mode if scatter duration is over
+        if ((scatterDif > scatterDuration || this.scatterNumber >= maxScatterNumber) && this.state === "scatter") { // enter chase mode if scatter duration is over or if limit exceeds
           this.changeState("chase")
-        } else if (chaseDif > chaseDuration && this.state === "chase" && this.scatterNumber < maxScatterNumber) { // enter scatter mode if chase duration is over (can only enter limited amount of times)
+        } else if (chaseDif > chaseDuration && this.state === "chase" && this.scatterNumber < maxScatterNumber) { // enter scatter mode if chase duration is over (imited amount of times)
           this.changeState("scatter")
         } else {
          // this.changeState("chase") // enter chase mode as last resort
