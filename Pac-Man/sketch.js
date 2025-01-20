@@ -29,7 +29,7 @@ let scatterDuration = 7;
 let maxScatterNumber = 4;
 
 let canvasX = 950
-let canvasY = 918
+let canvasY
 
 let font;
 let intro = false;
@@ -37,6 +37,7 @@ let introMusic;
 
 let grids = [];
 let paths = [];
+let popUps = [];
 let layout = [
               "1111111111111111111111111111", // 1
               "1000000000000110000000000001", // 2
@@ -73,6 +74,11 @@ let layout = [
 
 let totalDots = 0;
 let dotsEaten = 0;
+
+let ghostScore = 200;
+let energizerScore = 100;
+let dotScore = 10;
+let fruitScore = 100;
 
 let player 
 let redGhost
@@ -176,7 +182,8 @@ function preload() {
 }
 
 function setup() {
-  createCanvas(canvasX, canvasY);
+  createCanvas(950, windowHeight);
+  canvasY = height
   imageMode(CENTER);
   frameRate(fps);
   angleMode(DEGREES);
@@ -221,11 +228,11 @@ function setup() {
   }
 
   print(grids, paths)
-  player = new pac(pacStartRow, pacStartColumn);
-  redGhost = new ghost(0)
-  pinkGhost = new ghost(1)
-  blueGhost = new ghost(2)
-  yellowGhost = new ghost(3)
+  player = new Pac(pacStartRow, pacStartColumn);
+  redGhost = new Ghost(0)
+  pinkGhost = new Ghost(1)
+  blueGhost = new Ghost(2)
+  yellowGhost = new Ghost(3)
 }
 
 function endScreen(won) { // win and death screen
@@ -282,7 +289,7 @@ function debug() {
   debugRow = Math.floor(mouseY / length)
 }
 
-class pac {
+class Pac {
   constructor(row, column) {
     this.row = row || 0;
     this.column = column || 0;
@@ -526,7 +533,7 @@ class pac {
   }
 }
 
-class ghost {
+class Ghost {
   constructor(id) {
     this.moveX = 0;
     this.moveY = 0;
@@ -978,19 +985,18 @@ class ghost {
       turnAround = true;
     }
 
-    
     if (turnAround && this.surroundingGridPaths[oppositeDir][2] !== "1") {
       this.dir = oppositeDir
     }
-    
 
     this.state = state
   }
 
   eaten() {
     gamePaused = true
-    gamePauseTime = 2 * fps;
+    gamePauseTime = 0.5 * fps;
     this.changeState("dead")
+    popUps.push(["200", this.x, this.y + length / 2])
   }
 }
 
@@ -1003,13 +1009,21 @@ function draw() {
 
   let winCondition = dotsEaten === totalDots
 
-
-
   if (gamePaused) {
     gamePauseTime -= 1;
 
+    for (i = 0; i < popUps.length; i++) {
+      let popUp = popUps[i]
+      
+      fill(0, 255, 255)
+      textSize(length * 0.75)
+      text(popUp[0], popUp[1], popUp[2])
+    }
+
     if (gamePauseTime <= 0) {
       gamePaused = 0;
+
+      popUps = []
     }
   } else {
     player.show()
@@ -1029,10 +1043,10 @@ function draw() {
         intro = true;
       }
     }
-      else if(gameStart===false&&gameEnd===false){
-          textSize(30);
-          strokeWeight(1);
-          text("PRESS SPACE TO START", 0, height/2-30);
+      else if (!gameStart && !gameEnd) {
+          textSize(length / 2 - 1);
+          strokeWeight(0);
+          text("PRESS SPACE TO START!", length * columnNum / 2, length * rowNum /2 + 2.25 * length);
       }
       // else if(gameStart===false&&gameEnd===true){
   
@@ -1040,6 +1054,7 @@ function draw() {
     
   }
 }
+
 
 function keyPressed() {
   if (key === "w" || keyCode === UP_ARROW) {
