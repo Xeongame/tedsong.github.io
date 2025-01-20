@@ -31,39 +31,44 @@ let maxScatterNumber = 4;
 let canvasX = 950
 let canvasY = 918
 
+let font;
+let intro = false;
+let introMusic;
+
 let grids = [];
 let paths = [];
-let layout = ["1111111111111111111111111111", // 1
-             "1000000000000110000000000001", // 2
-             "1011110111110110111110111101", // 3
-             "1O111101111101101111101111O1", // 4
-             "1011110111110110111110111101", // 5
-             "1000000000000000000000000001", // 6
-             "1011110110111111110110111101", // 7
-             "1011110110111111110110111101", // 8
-             "1000000110000110000110000001", // 9
-             "111111011111o11o111110111111", // 10
-             "ooooo1011111o11o1111101ooooo", // 11
-             "ooooo1011oooooooooo1101ooooo", // 12
-             "ooooo1011o11111111o1101ooooo", // 13
-             "111111011o1oooooo1o110111111", // 14
-             "------0ooo1oooooo1ooo0------", // 15
-             "111111011o1oooooo1o110111111", // 16
-             "ooooo1011o11111111o1101ooooo", // 17
-             "ooooo1011oooooooooo1101ooooo", // 18
-             "ooooo1011o11111111o1101ooooo", // 19
-             "111111011o11111111o110111111", // 20
-             "1000000000000110000000000001", // 21
-             "1011110111110110111110111101", // 22
-             "1011110111110110111110111101", // 23
-             "1O001100000000000000001100O1", // 24
-             "1110110110111111110110110111", // 25
-             "1110110110111111110110110111", // 26
-             "1000000110000110000110000001", // 27
-             "1011111111110110111111111101", // 28
-             "1011111111110110111111111101", // 29
-             "1000000000000000000000000001", // 30
-             "1111111111111111111111111111", // 31
+let layout = [
+              "1111111111111111111111111111", // 1
+              "1000000000000110000000000001", // 2
+              "1011110111110110111110111101", // 3
+              "1O111101111101101111101111O1", // 4
+              "1011110111110110111110111101", // 5
+              "1000000000000000000000000001", // 6
+              "1011110110111111110110111101", // 7
+              "1011110110111111110110111101", // 8
+              "1000000110000110000110000001", // 9
+              "111111011111o11o111110111111", // 10
+              "ooooo1011111o11o1111101ooooo", // 11
+              "ooooo1011oooooooooo1101ooooo", // 12
+              "ooooo1011o11111111o1101ooooo", // 13
+              "111111011o1oooooo1o110111111", // 14
+              "------0ooo1oooooo1ooo0------", // 15
+              "111111011o1oooooo1o110111111", // 16
+              "ooooo1011o11111111o1101ooooo", // 17
+              "ooooo1011oooooooooo1101ooooo", // 18
+              "ooooo1011o11111111o1101ooooo", // 19
+              "111111011o11111111o110111111", // 20
+              "1000000000000110000000000001", // 21
+              "1011110111110110111110111101", // 22
+              "1011110111110110111110111101", // 23
+              "1O001100000000000000001100O1", // 24
+              "1110110110111111110110110111", // 25
+              "1110110110111111110110110111", // 26
+              "1000000110000110000110000001", // 27
+              "1011111111110110111111111101", // 28
+              "1011111111110110111111111101", // 29
+              "1000000000000000000000000001", // 30
+              "1111111111111111111111111111", // 31
             ];
 
 let totalDots = 0;
@@ -76,8 +81,9 @@ let pinkGhost
 let blueGhost
 
 let gameStart = false; // player begins moving
-let gamePause = false; // eating a ghost
+let gamePaused = false; // eating a ghost
 let gameEnd = false; // eaten by a ghost or winning
+let gamePauseTime = 0;
 
 let debugWalls = true;
 let debugColumn = 0;
@@ -91,6 +97,7 @@ let energizerSprite
 let pacSprites = []
 let ghostSprites = []
 
+// helper dictionaries
 let directions = ["right", "left", "down", "up"]
 let colors = ["red", "pink", "blue", "yellow"]
 let statuses = ["normal", "scared", "dead"]
@@ -100,8 +107,6 @@ let oppositeDirections = {
   up:"down",
   down:"up"
 }
-
-
 
 function getGridCenterIndex(array) {
   let index = array.length - 1;
@@ -117,7 +122,8 @@ function preload() {
   mapSprite = loadImage('assets/map.png')
   energizerSprite = loadImage('assets/energizer.png')
   dotSprite = loadImage('assets/dot.png')
-
+  font = loadFont('assets/ARCADE_N.TTF');
+  introMusic = loadSound('assets/01. Game Start.mp3')
   // pacman sprites
   for (let d = 0; d < 4; d++) {
     let dir = directions[d]
@@ -171,9 +177,12 @@ function preload() {
 
 function setup() {
   createCanvas(canvasX, canvasY);
-  imageMode(CENTER)
-  frameRate(fps)
-  angleMode(DEGREES)
+  imageMode(CENTER);
+  frameRate(fps);
+  angleMode(DEGREES);
+
+  textAlign(CENTER)
+  textFont(font);
 
   // grids set up
   for (let x = 0; x < columnNum; x++) {
@@ -226,7 +235,7 @@ function endScreen(won) { // win and death screen
 function drawMap() {
   image(mapSprite, length * columnNum / 2, length * rowNum / 2, length * columnNum, length * rowNum)
 
-  if (!gamePause) {
+  if (!gamePaused) {
     for (let row = 0; row < grids.length; row++) {
       for (let column = 0; column < grids[row].length; column ++) {
         stroke(0, 0, 255)
@@ -590,7 +599,7 @@ class ghost {
 
   show() {
     fill(this.color);
-    circle(this.x, this.y, length * 0.8);
+    //circle(this.x, this.y, length * 0.8);
     //rect(this.targetX, this.targetY, length * 0.5, length * 0.5)
     
     if (this.state === "frightened") {
@@ -695,8 +704,8 @@ class ghost {
       this.targetX = targetGrid[0][0][0]
       this.targetY = targetGrid[1][1][1]
 
-      print(this.row, this.column, this.currentPointIndex, this.nextWaypoints, this.waypoints, this.x)
-      if (this.row === 11 && this.column === 14 && this.nextPointIndex === 0) { // at the entrance of the ghost house
+      // at the entrance of the ghost house
+      if (this.row === 11 && this.column === 14 && this.nextPointIndex === 0) { 
         this.changeState("enterIdle")
       }
     }
@@ -867,16 +876,18 @@ class ghost {
 
         if (dirInt > 0) { // assigns a new position in the new grid based on moving direction
           this.currentPointIndex = 0;
+          this.moveX = 0;
         } else {
           this.currentPointIndex = this.waypoints.length;
         }
       }
 
-      this.nextPointIndex = Math.max(0, Math.min(this.currentPointIndex + this.moveX + this.moveY, this.waypoints.length - 1))
+      this.nextPointIndex = Math.max(0, Math.min(this.currentPointIndex + this.moveX + this.moveY, this.waypoints.length))
+      let constant = this.nextPointIndex === length && -1 || 0;
 
      // print(this.queueDir, this.dir, this.waiting, this.nextPointIndex, this.currentPointIndex, this.moveX, this.surroundingGridPaths, this.waypoints, this.nextGridPath)
       // move
-      let nextPoint = this.waypoints[this.nextPointIndex]
+      let nextPoint = this.waypoints[this.nextPointIndex + constant]
       let thisCenterIndex = getGridCenterIndex(this.waypoints)
 
       if (!this.waiting) {
@@ -891,10 +902,12 @@ class ghost {
 
       if (dist <= length) { // touching player
         if (this.state === "frightened") {
-          this.changeState("dead")
+         this.eaten()
         }
         //gameStart =false
       }
+
+      print(this.x, this.dir, this.nextPointIndex, this.currentPointIndex, this.moveX, indexDif)
      
        // change direction when at the middle of current grid
       if (this.nextPointIndex === thisCenterIndex) {
@@ -923,7 +936,7 @@ class ghost {
     let chaseDif = (frameCount - this.lastChaseTime) / fps
     let scatterDif = (frameCount - this.lastScatterTime) / fps
 
-    if (this.state !== "idle" && this.state !== "leaveIdle") {
+    if (this.state !== "idle" && this.state !== "leaveIdle" && this.state !== "dead") {
       if (player.energized) { // enter frightened mode when player eats energizer
         if (this.state !== "frightened" && player.scareGhost) {
           print(this.code, this.state)
@@ -973,6 +986,12 @@ class ghost {
 
     this.state = state
   }
+
+  eaten() {
+    gamePaused = true
+    gamePauseTime = 2 * fps;
+    this.changeState("dead")
+  }
 }
 
 function draw() {
@@ -984,22 +1003,41 @@ function draw() {
 
   let winCondition = dotsEaten === totalDots
 
-  if (gamePause) {
-    endScreen()
+
+
+  if (gamePaused) {
+    gamePauseTime -= 1;
+
+    if (gamePauseTime <= 0) {
+      gamePaused = 0;
+    }
   } else {
     player.show()
     blueGhost.show()
     redGhost.show()
     pinkGhost.show()
     yellowGhost.show()
-
+  
     if (gameStart) {
       player.move()
       blueGhost.move()
       redGhost.move()
       pinkGhost.move()
       yellowGhost.move()
+      if(intro===false){
+        introMusic.play();
+        intro = true;
+      }
     }
+      else if(gameStart===false&&gameEnd===false){
+          textSize(30);
+          strokeWeight(1);
+          text("PRESS SPACE TO START", 0, height/2-30);
+      }
+      // else if(gameStart===false&&gameEnd===true){
+  
+      // }
+    
   }
 }
 
