@@ -14,63 +14,99 @@ let length = 24;
 
 let pacX = 0;
 let pacY = 0;
+let pacStartColumn = 14;
+let pacStartRow = 23;
+
 let pacSpeed = 3;
-let pacStartColumn = 1;
-let pacStartRow = 14;
+let ghostSpeed = 3;
+let ghostFrightenedSpeed = 2;
+let ghostWarpZoneSpeed = 2;
+let ghostIdleSpeed = 2;
+
+let chaseDuration = 255;
+let energizedDuration = 5;
+let scatterDuration = 7;
+let maxScatterNumber = 4;
 
 let canvasX = 950
 let canvasY = 918
 
 let grids = [];
 let paths = [];
-let walls = ["1111111111111111111111111111", // 1
+let layout = ["1111111111111111111111111111", // 1
              "1000000000000110000000000001", // 2
              "1011110111110110111110111101", // 3
-             "1011110111110110111110111101", // 4
+             "1O111101111101101111101111O1", // 4
              "1011110111110110111110111101", // 5
              "1000000000000000000000000001", // 6
              "1011110110111111110110111101", // 7
              "1011110110111111110110111101", // 8
              "1000000110000110000110000001", // 9
-             "1111110111110110111110111111", // 10
-             "0000010111110110111110100000", // 11
-             "0000010110000000000110100000", // 12
-             "0000010110111001110110100000", // 13
-             "1111110110100000010110111111", // 14
-             "0000000000100000010000000000", // 15
-             "1111110110100000010110111111", // 16
-             "0000010110111111110110100000", // 17
-             "0000010110000000000110100000", // 18
-             "0000010110111111110110100000", // 19
-             "1111110110111111110110111111", // 20
+             "111111011111o11o111110111111", // 10
+             "ooooo1011111o11o1111101ooooo", // 11
+             "ooooo1011oooooooooo1101ooooo", // 12
+             "ooooo1011o11111111o1101ooooo", // 13
+             "111111011o1oooooo1o110111111", // 14
+             "------0ooo1oooooo1ooo0------", // 15
+             "111111011o1oooooo1o110111111", // 16
+             "ooooo1011o11111111o1101ooooo", // 17
+             "ooooo1011oooooooooo1101ooooo", // 18
+             "ooooo1011o11111111o1101ooooo", // 19
+             "111111011o11111111o110111111", // 20
              "1000000000000110000000000001", // 21
              "1011110111110110111110111101", // 22
              "1011110111110110111110111101", // 23
-             "1000110000000000000000110001", // 24
+             "1O001100000000000000001100O1", // 24
              "1110110110111111110110110111", // 25
              "1110110110111111110110110111", // 26
              "1000000110000110000110000001", // 27
              "1011111111110110111111111101", // 28
              "1011111111110110111111111101", // 29
              "1000000000000000000000000001", // 30
-             "1_11111111111111111111111111", // 31
+             "1111111111111111111111111111", // 31
             ];
 
+let totalDots = 0;
+let dotsEaten = 0;
+
 let player 
-let gameStart = false;
+let redGhost
+let yellowGhost
+let pinkGhost
+let blueGhost
+
+let gameStart = false; // player begins moving
+let gamePause = false; // eating a ghost
+let gameEnd = false; // eaten by a ghost or winning
 
 let debugWalls = true;
 let debugColumn = 0;
 let debugRow = 0;
+let fps = 60;
 
 let mapSprite
+let dotSprite
+let energizerSprite
+
 let pacSprites = []
-let spriteDir = ["right", "left", "down", "up"]
+let ghostSprites = []
+
+let directions = ["right", "left", "down", "up"]
+let colors = ["red", "pink", "blue", "yellow"]
+let statuses = ["normal", "scared", "dead"]
+let oppositeDirections = {
+  right:"left",
+  left:"right",
+  up:"down",
+  down:"up"
+}
+
+
 
 function getGridCenterIndex(array) {
   let index = array.length - 1;
 
-  if (array.length % (length/2) === 0) {
+  if (array.length % (length/2) === 0) { // grids with even numbered length, ex: 24 pixels long
     index = array.length - length/2
   }
 
@@ -79,9 +115,12 @@ function getGridCenterIndex(array) {
 
 function preload() {
   mapSprite = loadImage('assets/map.png')
+  energizerSprite = loadImage('assets/energizer.png')
+  dotSprite = loadImage('assets/dot.png')
 
+  // pacman sprites
   for (let d = 0; d < 4; d++) {
-    let dir = spriteDir[d]
+    let dir = directions[d]
     pacSprites[dir] = []
 
     for (let i = 0; i < 3; i++) {
@@ -89,12 +128,37 @@ function preload() {
       pacSprites[dir][i] = sprite
     }
   }
+
+  // ghost sprites
+  for (let s = 0; s < 3; s++) {
+    let status = statuses[s]
+    ghostSprites[status] = []
+
+    if (status === "normal") {
+      for (let d = 0; d < 4; d++) {
+        let dir = directions[d]
+        ghostSprites[status][dir] = []
+    
+        for (let c = 0; c < 4; c++) {
+          let color = colors[c]
+          ghostSprites[status][dir][color] = []
+      
+          for (let i = 0; i < 2; i++) {
+            let sprite = loadImage('assets/' + dir + color + 'ghost' + i + '.png')
+            ghostSprites[status][dir][color][i] = sprite
+          }
+        }
+      }
+    }
+  }
+
+  ghostSprites["scared"] = []
 }
 
 function setup() {
   createCanvas(canvasX, canvasY);
   imageMode(CENTER)
-  frameRate(120)
+  frameRate(fps)
   angleMode(DEGREES)
 
   // grids set up
@@ -125,83 +189,74 @@ function setup() {
         yPoints.push([centerX, i])
       }
 
-      // wall generation
-      let wallRow = walls[y]
-      let wallColumn = wallRow[x]
-      let blocked = wallColumn !== "0"
+      // grid type
+      let type = layout[y][x]
 
-      row[x] = [xPoints, yPoints, blocked, wallColumn]
+      row[x] = [xPoints, yPoints, type, false, 0] // meta data for each grid
       paths[y] = row
     }
   }
 
   print(grids, paths)
   player = new pac(pacStartRow, pacStartColumn);
+  redGhost = new ghost(0)
+  pinkGhost = new ghost(1)
+  blueGhost = new ghost(2)
+  yellowGhost = new ghost(3)
+}
+
+function endScreen(won) { // win and death screen
+
 }
 
 function drawMap() {
   image(mapSprite, length * columnNum / 2, length * rowNum / 2, length * columnNum, length * rowNum)
 
-  for (let row = 0; row < grids.length; row++) {
-    for (let column = 0; column < grids[row].length; column ++) {
-      stroke(0, 0, 255)
-      strokeWeight(border);
-
-      let x = grids[row][column][0]
-      let y = grids[row][column][1]
-      let blocked = paths[row][column][2]
-
-      fill(0)
-      if (blocked && debugWalls) {
-        fill(255, 0, 0);
+  if (!gamePause) {
+    for (let row = 0; row < grids.length; row++) {
+      for (let column = 0; column < grids[row].length; column ++) {
+        stroke(0, 0, 255)
+        strokeWeight(border);
+  
+        let x = grids[row][column][0]
+        let y = grids[row][column][1]
+        let type = paths[row][column][2]
+        let info = paths[row][column][3] // stores additional context for each grid type
+        let anim = paths[row][column][4] // controls static animation
+  
+        fill(0)
+        if (type === "1" && debugWalls) {
+          fill(255, 0, 0);
+        }
+  
+        noFill()
+        rect(x, y, length, length)
+  
+        if (type === "0" && !info) { // dots
+          image(dotSprite, x + length / 2, y + length / 2, length * 2, length * 2)
+  
+          totalDots += 1;
+        } else if (type === "O" && !info) { // energizers
+          if (anim > 1) {
+            image(energizerSprite, x + length / 2, y + length / 2, length * 2, length * 2)
+          }
+  
+          paths[row][column][4] += 1/8
+  
+          if (paths[row][column][4] > 1.5) {
+            paths[row][column][4] = 0
+          }
+        } else if (type === "1" || type === "!") {
+          paths[row][column][3] = "blocked" 
+        }
       }
-
-      noFill()
-      //rect(x, y, length, length)
     }
-  }
-
- 
+  } 
 }
 
 function debug() {
   debugColumn = Math.floor(mouseX / length)
   debugRow = Math.floor(mouseY / length)
-}
-
-function draw() {
-  translate(canvasX / 2 - (length * columnNum / 2), canvasY / 2 - (length * rowNum / 2))
-  background(0);
-  
-  drawMap()
-  debug()
-
-  player.show()
-
-  if (gameStart) {
-    player.move()
-  }
-}
-
-function keyPressed() {
-  if (key === "w" || keyCode === UP_ARROW) {
-    player.dir = "up"
-  } else if (key === "s" || keyCode === DOWN_ARROW) {
-    player.dir = "down"
-  } else if (key === "a" || keyCode === LEFT_ARROW) {
-    player.dir = "left"
-  } else if (key === "d" || keyCode === RIGHT_ARROW) {
-    player.dir = "right"
-  } else if (key === " ") {
-    gameStart = true;
-  } else if (key === "y") { // debug key
-    player.move()
-    player.show()
-  }
-}
-
-function mouseClicked() {
-  paths[debugRow][debugColumn][2] = true; // adds a 'blocked' property to the grid for debugging
 }
 
 class pac {
@@ -264,6 +319,8 @@ class pac {
 
     // axisIndex determines the chosen waypoints: 0 = moving on the x axis, 1 = moving on the y axis
     this.waypoints = path[this.axisIndex] 
+    this.moveXSign = Math.sign(this.moveX)
+    this.moveYSign = Math.sign(this.moveY)
 
     for (let i = 0; i < this.waypoints.length; i++) {
       let x = this.waypoints[i][0]
@@ -296,6 +353,7 @@ class pac {
        
     }
 
+    this.currentGridPath = paths[this.row][this.column]
     this.nextGridPath = this.surroundingGridPaths[this.dir]
     this.queuedGridPath = this.surroundingGridPaths[this.queueDir]
 
@@ -320,8 +378,8 @@ class pac {
     // checks if direction changed in a perpendicular direction, ex: previously moving up and now changing directions to move left
     let isPerpendicular = ((this.dir === "up" || this.dir === "down") && (this.lastDir === "right" || this.lastDir === "left")) || (this.dir === "left" || this.dir === "right") && (this.lastDir === "up" || this.lastDir === "down")
 
-    let isBlocked = this.nextGridPath[2];
-    let perpendicularBlocked = isPerpendicular && this.queuedGridPath[2]
+    let isBlocked = this.nextGridPath[3] === "blocked";
+    let perpendicularBlocked = isPerpendicular && this.queuedGridPath[3] === "blocked"
     let forcedMove = false; // QUEUED MOVEMENT: forces movement in the old direction when failing to change directions
     let blockedForcedMove = false;
 
@@ -346,7 +404,7 @@ class pac {
 
         let doubleCheck = perpendicularBlocked;
         this.queueMove = true;
-        perpendicularBlocked = this.nextGridPath[2]; //checks the next grid 
+        perpendicularBlocked = this.nextGridPath[3] === "blocked"; //checks the next grid 
         forcedMove = !perpendicularBlocked; // cancels QUEUED MOVEMENT if no unblocked path is available 
 
         if (doubleCheck || !forcedMove) {
@@ -378,8 +436,22 @@ class pac {
         this.dir = this.lastDir
       }
     } 
+
+    // touching dots
+    if (this.currentPointIndex === thisCenterIndex  && !this.currentGridPath[3]) {
+      if (this.currentGridPath[2] === "0") { // regular dot
+        dotsEaten += 1
+      } else if (this.currentGridPath[2] === "O") {// energizer
+        dotsEaten += 1
+        this.energized = true;
+        this.scareGhost = true; // sets true for one frame to scare all active ghosts
+        this.energizedTime = energizedDuration * fps
+      }
+
+      this.currentGridPath[3] = true;
+    }
     
-    // handles moving out of current grid
+    // moving out of current grid
     if (indexDif <= pacSpeed && (!isBlocked || (isBlocked && isPerpendicular && !perpendicularBlocked))) { 
       this.waypoints = this.nextWaypoints
 
@@ -417,9 +489,479 @@ class pac {
     let nextPoint = this.waypoints[this.nextPointIndex]
     this.x = nextPoint[0]
     this.y = nextPoint[1]
+
+    // power up count down
+    if (this.energized) {
+      this.scareGhost = this.energizedTime === energizedDuration * fps;
+      this.energizedTime -= 1
+    
+      
+      if (this.energizedTime === 0) {
+        this.energized = false;
+      }
+    }
   }
 }
 
 class ghost {
+  constructor(id) {
+    this.moveX = 0;
+    this.moveY = 0;
+    this.spriteId = 0;
+    this.state = "idle"
+    this.dir = "up";
+    this.lastDir = "right";
+    this.queueDir = "right";
+    this.id = id
 
+    if (id === 0) { // red ghost
+      this.row = 11;
+      this.column = 14;
+
+      this.state = "chase"
+      this.dir = "right"
+      this.code = "red"
+
+      this.targetCornerWaitTime = 3;
+      this.targetIdleTime = 0
+      this.scatterColumn = 27;
+      this.scatterRow = 0;
+      this.color = color(255, 0, 0)
+    } else if (id === 1) { // pink ghost
+      this.row = 14;
+      this.column = 14;
+       this.code = "pink"
+
+      this.targetCornerWaitTime = 2;
+      this.targetIdleTime = fps
+      this.scatterColumn = 0
+      this.scatterRow = 0;
+      this.color = color(255, 200, 200)
+    } else if (id === 2) { // blue ghost
+      this.row = 14;
+      this.column = 12;
+       this.code = "blue"
+
+      this.targetCornerWaitTime = 2;
+      this.targetIdleTime = fps * 6
+      this.scatterColumn = 0
+      this.scatterRow = 30; 
+      this.color = color(0, 0, 255)
+    } else { // yellow ghost
+      this.row = 14;
+      this.column = 16;
+       this.code = "yellow"
+
+      this.targetCornerWaitTime = 2;
+      this.targetIdleTime = fps * 8
+      this.scatterColumn = 27
+      this.scatterRow = 30;
+      this.color = color(255, 255, 0)
+    }
+
+    let grid = grids[this.row][this.column]
+    this.x = grid[0]
+    this.y = grid[1] + length/2
+
+    this.queueMove = false;
+    this.surroundingGridPaths = []
+
+    this.idleTime = this.targetIdleTime // in frames
+    this.cornerWaitTime = this.targetCornerWaitTime; // in frames
+    this.lastChaseTime = 0;
+    this.lastScatterTime = 0;
+    this.scatterNumber = 0;
+  }
+
+  show() {
+    fill(this.color);
+    circle(this.x, this.y, length * 0.8);
+    rect(this.targetX, this.targetY, length * 0.5, length * 0.5)
+    
+    if (this.state === "frightened") {
+      image(ghostSprites["scared"][this.lastDir][this.code][Math.floor(this.spriteId)], this.x, this.y, length * 2, length * 2)
+    } else {
+      image(ghostSprites["normal"][this.lastDir][this.code][Math.floor(this.spriteId)], this.x, this.y, length * 2, length * 2)
+    }
+    
+
+    if (gameStart) {
+      this.spriteId += 0.25
+    }
+
+    if (this.spriteId >= 2) {
+      this.spriteId = 0;
+    }
+  }
+
+  locate() {
+    this.moveX = 0
+    this.moveY = 0
+
+     // locate surrounding grids
+     if (paths[this.row][this.column + 1]) {
+      this.surroundingGridPaths.right = paths[this.row][this.column + 1]
+    } else { 
+      this.surroundingGridPaths.right = paths[this.row][0]
+    }
+
+    if (paths[this.row][this.column - 1]) {
+      this.surroundingGridPaths.left = paths[this.row][this.column - 1]
+    } else {
+      this.surroundingGridPaths.left = paths[this.row][columnNum - 1]
+    }
+
+    if (paths[this.row + 1]) {
+      this.surroundingGridPaths.down = paths[this.row + 1][this.column]     
+    }
+
+    if (paths[this.row - 1]) {
+      this.surroundingGridPaths.up = paths[this.row - 1][this.column]
+    }
+
+    let targetRow = 0
+    let targetColumn = 0
+
+    if (this.state === "scatter") { // targets one of the four map corners 
+      targetRow = this.scatterRow
+      targetColumn = this.scatterColumn
+
+      let targetGrid = paths[targetRow][targetColumn]
+  
+      this.targetX = targetGrid[0][0][0]
+      this.targetY = targetGrid[1][1][1]
+    } else if (this.state === "chase") { // targets player's grid
+      if (this.id === 0) { // red ghost targets player's current position
+        this.targetX = player.x
+        this.targetY = player.y
+      } else if (this.id === 1) { // pink ghost targets 4 grids in front of player
+        this.targetX = player.x + player.moveXSign * 2 * length
+        this.targetY = player.y + player.moveYSign * 24 * length
+
+      } else if (this.id === 2) { // blue ghost targets 4 grids in front of the player, then projected in the direction of the red ghost 
+        let x = player.x + player.moveXSign * 2 * length
+        let y = player.y + player.moveYSign * 2 * length
+
+        this.targetX = x - redGhost.x + x
+        this.targetY = y - redGhost.y + y
+      } else { // yellow ghost acts like red ghost if player is 8 grids or more away, otherwise it uses scatter mode pattern
+        let dist = Math.sqrt(Math.abs(player.x - yellowGhost.x) ** 2 + Math.abs(player.y - yellowGhost.y) ** 2)
+
+        if (dist < 8 * length) {
+          targetRow = this.scatterRow
+          targetColumn = this.scatterColumn
+
+          let targetGrid = paths[targetRow][targetColumn]
+  
+          this.targetX = targetGrid[0][0][0]
+          this.targetY = targetGrid[1][1][1]
+        } else {
+          this.targetX = player.x
+          this.targetY = player.y
+        }
+      }
+    } else if (this.state === "frightened") { // move to random grids
+      let n1 = Math.floor(random(0, rowNum - 1) + 0.5)
+      let n2 = Math.floor(random(0, columnNum - 1) + 0.5)
+
+      let targetGrid = paths[n1][n2]
+  
+      this.targetX = targetGrid[0][0][0]
+      this.targetY = targetGrid[1][1][1]
+    }
+
+    let path = paths[this.row][this.column]
+    let lastDist = 999999
+
+    // path find: chooses the direction closest to the target grid
+    for (let i = 0; i < 4; i++) { 
+      let dir = directions[i]
+      let nextGrid = this.surroundingGridPaths[dir]
+
+      if (nextGrid[2] === "1" || dir === oppositeDirections[this.dir]) { // ghosts cannot move in the opposite direction or into a wall
+        continue
+      }
+      let centerX = nextGrid[0][0][0] + length / 2
+      let centerY = nextGrid[1][0][1] + length / 2
+
+      let xDif = Math.abs(this.targetX - centerX)
+      let yDif = Math.abs(this.targetY - centerY)
+      let dist = Math.sqrt(xDif ** 2 + yDif ** 2)
+
+      if (dist <= lastDist) {
+        lastDist = dist
+        this.queueDir = dir
+      }
+    }
+
+    this.speed = ghostSpeed
+
+    if (path[2] === "-") { // slows down if in warp zone
+      this.speed = ghostWarpZoneSpeed;
+    }
+
+    if (this.state === "frightened") {
+      this.speed = ghostFrightenedSpeed;
+    } else if (this.state === "idle") {
+      this.speed = ghostIdleSpeed
+    }
+
+    //print(this.column)
+    if (this.dir === "right") { 
+      this.moveX = this.speed 
+      this.axisIndex = 0
+    } else if (this.dir === "left") { 
+      this.moveX = -this.speed 
+      this.axisIndex = 0
+    } else if (this.dir === "up") { 
+      this.moveY = -this.speed
+      this.axisIndex = 1
+    } else { 
+      this.moveY = this.speed
+      this.axisIndex = 1
+    }
+
+    // axisIndex determines the chosen waypoints: 0 = moving on the x axis, 1 = moving on the y axis
+    this.waypoints = path[this.axisIndex] 
+
+    for (let i = 0; i < this.waypoints.length; i++) {
+      let x = this.waypoints[i][0]
+      let y = this.waypoints[i][1]
+
+      if (this.x === x && this.y === y) {
+        this.currentPointIndex = i
+      }
+    }
+
+    this.currentGridPath = paths[this.row][this.column]
+    this.nextGridPath = this.surroundingGridPaths[this.dir]
+    this.queuedGridPath = this.surroundingGridPaths[this.queueDir]
+
+    if (this.nextGridPath) {
+      if (this.moveX !== 0) { //moving on the x axis
+        this.nextWaypoints = this.nextGridPath[0]   
+      } else { //moving on the y axis
+        this.nextWaypoints = this.nextGridPath[1]   
+      }
+    }
+  }
+
+  move() {
+    this.locate() 
+    this.lastDir = this.dir
+
+    // positive = moving left to right or top to bottom, negative = moving right to left or bottom to top
+    let dirInt = (this.moveX + this.moveY)/Math.abs(this.moveX + this.moveY) 
+
+    //calculates difference of steps from the next grid 
+    let indexDif = (dirInt > 0) && this.waypoints.length - this.currentPointIndex || this.currentPointIndex + 1 
+    
+    if (this.state === "idle") { // ghost house state (stuck in the box at the center)
+      let midY = this.waypoints[length / 2][1]
+      let topY = midY - length / 2
+      let bottomY = midY + length / 2
+      
+      this.y += this.moveY
+      this.idleTime -= 1
+
+      if (this.y <= topY) {
+        this.dir = "down"
+      } else if (this.y >= bottomY) {
+        this.dir = "up"
+      }
+
+      if (this.idleTime <= 0 && this.y === midY) { // leaves idle state when idleTime reaches 0 and y position is centered
+        this.changeState("leaveIdle")
+      }
+    } else if (this.state === "leaveIdle") { // moving out of ghost house
+      let ghostExit = paths[11][14][0][0] // the grid right outside the ghost house
+      let exitX = ghostExit[0]
+      let exitY = ghostExit[1]
+
+      if (this.x !== exitX) {
+        this.x += this.moveX
+        
+        if (this.x < exitX) { // moving until x coordinates match
+          this.dir = "right"
+        } else {
+          this.dir = "left"
+        }
+      } else if (this.y !== exitY) { // then moving until y coordinates match
+        this.dir = "up"
+        this.y += this.moveY
+      } else { // set up for scatter phase
+        this.row = 11
+        this.column = 14
+        this.changeState("scatter")
+
+        this.locate()
+        this.dir = this.queueDir
+      }
+    } else { // moves towards target grid
+      // moving out of current grid
+      if (indexDif < this.speed) { 
+        this.waypoints = this.nextWaypoints
+
+        if (this.moveX !== 0) { //moving on the x axis
+          this.column += dirInt
+          //this.moveX -= indexDif * dirInt
+        } else { //moving on the y axis
+          this.row += dirInt
+         // this.moveY -= indexDif * dirInt
+        }
+
+        // move to the other side of the map if in the warp zone (the open middle passage)
+        if (this.column > columnNum - 1) { 
+          this.column = 0
+        } else if (this.column < 0) {
+          this.column = columnNum - 1
+        }
+
+        if (dirInt > 0) { // assigns a new position in the new grid based on moving direction
+          this.currentPointIndex = 0;
+        } else {
+          this.currentPointIndex = this.waypoints.length;
+        }
+      }
+
+      this.nextPointIndex = Math.max(0, Math.min(this.currentPointIndex + this.moveX + this.moveY, this.waypoints.length - 1))
+
+      print(this.queueDir, this.dir, this.waiting, this.nextPointIndex, this.currentPointIndex, this.moveX, this.surroundingGridPaths, this.waypoints, this.nextGridPath)
+      // move
+      let nextPoint = this.waypoints[this.nextPointIndex]
+      let thisCenterIndex = getGridCenterIndex(this.waypoints)
+
+      if (!this.waiting) {
+        this.x = nextPoint[0]
+        this.y = nextPoint[1]
+      }
+     
+       // change direction when at the middle of current grid
+      if (this.nextPointIndex === thisCenterIndex) {
+        if (this.dir !== this.queueDir) { // forces ghost to turn slower than the player by temporarily stopping movement
+          this.waiting = true; 
+        }
+
+        this.dir = this.queueDir
+      }
+
+      // counting stopped time
+      if (this.waiting) {
+        this.cornerWaitTime -= 1
+
+        if (this.cornerWaitTime <= 0) { 
+          this.cornerWaitTime = this.targetCornerWaitTime
+          this.waiting = false;
+        }
+      }
+
+      //print(this.queueDir, thisCenterIndex, this.nextPointIndex, this.currentPointIndex, this.moveX, this.x, this.y, this.row, this.column)
+      //print(xDif, yDif)
+    }
+
+    // state handler
+    let chaseDif = (frameCount - this.lastChaseTime) / fps
+    let scatterDif = (frameCount - this.lastScatterTime) / fps
+
+    if (this.state !== "idle" && this.state !== "leaveIdle") {
+      if (player.energized) { // enter frightened mode when player eats energizer
+        if (this.state !== "frightened" && player.scareGhost) {
+          print(this.code, this.state)
+          this.lastState = this.state
+          this.changeState("frightened")
+        } 
+      } else if (!player.energized && this.state === "frightened") { // leave frightened mode and re-enter whatever state it was before
+        print("SDD")
+        this.changeState(this.lastState)
+      } else {
+        if (scatterDif > scatterDuration && this.state === "scatter") { // enter chase mode if scatter duration is over
+          this.changeState("chase")
+        } else if (chaseDif > chaseDuration && this.state === "chase" && this.scatterNumber < maxScatterNumber) { // enter scatter mode if chase duration is over (can only enter limited amount of times)
+          this.changeState("scatter")
+        } else {
+         // this.changeState("chase") // enter chase mode as last resort
+        } 
+      } 
+    }
+  }
+
+  changeState(state) {
+    let turnAround = false; 
+    let oppositeDir =  oppositeDirections[this.dir]
+
+    if (state === "scatter") {
+      if (this.lastState === "chase") {
+        turnAround = true;
+      }
+
+      this.lastScatterTime = frameCount 
+      this.scatterNumber += 1
+    } else if (state === "chase") {
+      if (this.lastState === "scatter") {
+        turnAround = true;
+      }
+
+      this.lastChaseTime = frameCount;
+    } else if (state === "frightened") {
+      turnAround = true;
+    }
+
+    
+    if (turnAround && this.surroundingGridPaths[oppositeDir][2] !== "1") {
+      this.dir = oppositeDir
+    }
+    
+
+    this.state = state
+  }
+}
+
+function draw() {
+  translate(canvasX / 2 - (length * columnNum / 2), canvasY / 2 - (length * rowNum / 2))
+  background(0);
+  
+  drawMap()
+  debug()
+
+  let winCondition = dotsEaten === totalDots
+
+  if (gamePause) {
+    endScreen()
+  } else {
+    player.show()
+    blueGhost.show()
+    redGhost.show()
+    pinkGhost.show()
+    yellowGhost.show()
+
+    if (gameStart) {
+      player.move()
+      blueGhost.move()
+      redGhost.move()
+      pinkGhost.move()
+      yellowGhost.move()
+    }
+  }
+}
+
+function keyPressed() {
+  if (key === "w" || keyCode === UP_ARROW) {
+    player.dir = "up"
+  } else if (key === "s" || keyCode === DOWN_ARROW) {
+    player.dir = "down"
+  } else if (key === "a" || keyCode === LEFT_ARROW) {
+    player.dir = "left"
+  } else if (key === "d" || keyCode === RIGHT_ARROW) {
+    player.dir = "right"
+  } else if (key === " ") {
+    gameStart = !gameStart;
+  } else if (key === "y") { // debug key
+    player.move()
+    redGhost.move()
+    redGhost.show()
+  }
+}
+
+function mouseClicked() {
+  paths[debugRow][debugColumn][2] = true; // adds a 'blocked' property to the grid for debugging
 }
