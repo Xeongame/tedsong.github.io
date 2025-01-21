@@ -23,16 +23,20 @@ let ghostFrightenedSpeed = 2;
 let ghostWarpZoneSpeed = 2;
 let ghostDeadSpeed = 6;
 
-let chaseDuration = 255;
-let energizedDuration = 8;
+let chaseDuration = 20;
+let energizedDuration = 5;
 let scatterDuration = 7;
 let maxScatterNumber = 4;
 
 let canvasX = 950
 let canvasY
 
-let font;
-let intro = false;
+let eatDotSound;
+let eatFruitSound;
+let deathSound;
+let eatGhostSound;
+let intermissionMusic
+let ghostSiren;
 let introMusic;
 
 let grids = [];
@@ -75,7 +79,10 @@ let layout = [
 let totalDots = 0;
 let dotsEaten = 0;
 
+let score = 0;
+let highscore = 0;
 let ghostScore = 200;
+let ghostBonusScore = 200; // extra score gained from eating multiple ghosts in a row
 let energizerScore = 100;
 let dotScore = 10;
 let fruitScore = 100;
@@ -86,8 +93,10 @@ let yellowGhost
 let pinkGhost
 let blueGhost
 
+let gamePreparing = false; 
+let gameWon = false;
 let gameStart = false; // player begins moving
-let gamePaused = false; // eating a ghost
+let gamePaused = false; 
 let gameEnd = false; // eaten by a ghost or winning
 let gamePauseTime = 0;
 
@@ -95,13 +104,22 @@ let debugWalls = true;
 let debugColumn = 0;
 let debugRow = 0;
 let fps = 60;
+let winScreenIndex = 0;
+
+let font;
+let introStart
+
+let intro = false;
+let introTime;
 
 let mapSprite
+let whiteMapSprite 
 let dotSprite
 let energizerSprite
 
 let pacSprites = []
 let ghostSprites = []
+let deathSprites = []
 
 // helper dictionaries
 let directions = ["right", "left", "down", "up"]
@@ -126,10 +144,18 @@ function getGridCenterIndex(array) {
 
 function preload() {
   mapSprite = loadImage('assets/map.png')
+  whiteMapSprite = loadImage('assets/whitemap.png')
   energizerSprite = loadImage('assets/energizer.png')
   dotSprite = loadImage('assets/dot.png')
   font = loadFont('assets/ARCADE_N.TTF');
-  introMusic = loadSound('assets/01. Game Start.mp3')
+
+  eatDotSound = loadSound('assets/waka.wav')
+  introMusic = loadSound('assets/gamestart.mp3')
+  intermissionMusic = loadSound('assets/intermission.mp3')
+  ghostSiren = loadSound('assets/ghostsirenloop.mp3')
+  eatGhostSound = loadSound('assets/eatghost.wav')
+  deathSound = loadSound('assets/death.wav')
+
   // pacman sprites
   for (let d = 0; d < 4; d++) {
     let dir = directions[d]
@@ -139,6 +165,12 @@ function preload() {
       let sprite = loadImage('assets/' + dir + 'pacman' + i + '.png')
       pacSprites[dir][i] = sprite
     }
+  }
+
+   // pacman death sprites
+   for (let i = 0; i < 11; i++) {
+    let sprite = loadImage('assets/death' + i + '.png')
+    deathSprites[i] = sprite
   }
 
   // ghost sprites
@@ -191,56 +223,15 @@ function setup() {
   textAlign(CENTER)
   textFont(font);
 
-  // grids set up
-  for (let x = 0; x < columnNum; x++) {
-    for (let y = 0; y < rowNum; y++) {
-      let row = grids[y] || [];
-      let column = [x * length, y * length]
-
-      row[x] = column
-      grids[y] = row
-    }
-  }
-
-  // path set up
-  for (let x = 0; x < columnNum; x++) {
-    for (let y = 0; y < rowNum; y++) {
-      let row = paths[y] || [];
-      let xPoints = []
-      let yPoints = []
-      let centerX = x * length + length / 2
-      let centerY = y * length + length / 2
-
-      for (let i = x * length; i < centerX + length / 2; i++) {
-        xPoints.push([i, centerY])
-      }
-
-      for (let i = y * length; i < centerY + length / 2; i++) {
-        yPoints.push([centerX, i])
-      }
-
-      // grid type
-      let type = layout[y][x]
-
-      row[x] = [xPoints, yPoints, type, false, 0] // meta data for each grid
-      paths[y] = row
-    }
-  }
-
-  print(grids, paths)
-  player = new Pac(pacStartRow, pacStartColumn);
-  redGhost = new Ghost(0)
-  pinkGhost = new Ghost(1)
-  blueGhost = new Ghost(2)
-  yellowGhost = new Ghost(3)
-}
-
-function endScreen(won) { // win and death screen
-
+  init()
 }
 
 function drawMap() {
-  image(mapSprite, length * columnNum / 2, length * rowNum / 2, length * columnNum, length * rowNum)
+  if (Math.floor(winScreenIndex) % 2 === 0) { // default map
+    image(mapSprite, length * columnNum / 2, length * rowNum / 2, length * columnNum, length * rowNum)
+  } else { // flashes white as win screen
+    image(whiteMapSprite, length * columnNum / 2, length * rowNum / 2, length * columnNum, length * rowNum)
+  }
 
   if (!gamePaused) {
     for (let row = 0; row < grids.length; row++) {
@@ -264,8 +255,6 @@ function drawMap() {
   
         if (type === "0" && !info) { // dots
           image(dotSprite, x + length / 2, y + length / 2, length * 2, length * 2)
-  
-          totalDots += 1;
         } else if (type === "O" && !info) { // energizers
           if (anim > 1) {
             image(energizerSprite, x + length / 2, y + length / 2, length * 2, length * 2)
@@ -306,21 +295,35 @@ class Pac {
     this.queueDir = "right";
 
     this.queueMove = false;
+    this.playDeathAnim = false;
     this.surroundingGridPaths = []
   }
 
   show() {
     fill(255, 255, 0);
     //circle(this.x, this.y, length * 0.8);
-    image(pacSprites[this.lastDir][Math.floor(this.spriteId)], this.x, this.y, length * 2, length * 2)
+    if (this.playDeathAnim) {
+      if (this.spriteId < 11) {
+        image(deathSprites[Math.floor(this.spriteId)], this.x, this.y, length * 2, length * 2)
 
-    if (this.moveX + this.moveY !== 0) { // cycles through sprite every 4 frames when moving
-      this.spriteId += 0.25
-    }
+        this.spriteId += 0.25
+      }
+    } else {
+      if (gameEnd || gameWon) {
+        this.spriteId = 0
+      }
 
-    if (this.spriteId >= 3) {
-      this.spriteId = 0;
+      image(pacSprites[this.lastDir][Math.floor(this.spriteId)], this.x, this.y, length * 2, length * 2)
+
+      if (this.moveX + this.moveY !== 0) { // cycles through sprite every 4 frames when moving
+        this.spriteId += 0.25
+      }
+  
+      if (this.spriteId >= 3) {
+        this.spriteId = 0;
+      }
     }
+    
   }
 
   locate() {
@@ -471,8 +474,11 @@ class Pac {
     if (this.currentPointIndex === thisCenterIndex  && !this.currentGridPath[3]) {
       if (this.currentGridPath[2] === "0") { // regular dot
         dotsEaten += 1
+        score += 10;
+        this.lastEatenDot = frameCount
       } else if (this.currentGridPath[2] === "O") {// energizer
         dotsEaten += 1
+        score += 100;
         this.energized = true;
         this.scareGhost = true; // sets true for one frame to scare all active ghosts
         this.energizedTime = energizedDuration * fps
@@ -525,9 +531,9 @@ class Pac {
       this.scareGhost = this.energizedTime === energizedDuration * fps;
       this.energizedTime -= 1
     
-      
       if (this.energizedTime === 0) {
         this.energized = false;
+        ghostBonusScore = ghostScore
       }
     }
   }
@@ -599,8 +605,8 @@ class Ghost {
 
     this.idleTime = this.targetIdleTime // in frames
     this.cornerWaitTime = this.targetCornerWaitTime; // in frames
-    this.lastChaseTime = 0;
-    this.lastScatterTime = 0;
+    this.lastChaseTime = frameCount;
+    this.lastScatterTime = frameCount;
     this.scatterNumber = 0;
   }
 
@@ -828,7 +834,6 @@ class Ghost {
       let exitX = exit[0]
       let exitY = exit[1]
 
-      print(exitX, this.x, this.y, exitY)
       if (this.x !== exitX) {
         this.x += this.moveX
         
@@ -841,7 +846,6 @@ class Ghost {
         this.dir = "up"
         this.y += this.moveY
       } else { // set up for scatter phase
-        print("SD")
         this.row = 11
         this.column = 14
         this.changeState("scatter")
@@ -884,6 +888,7 @@ class Ghost {
         if (dirInt > 0) { // assigns a new position in the new grid based on moving direction
           this.currentPointIndex = 0;
           this.moveX = 0;
+          this.moveY = 0;
         } else {
           this.currentPointIndex = this.waypoints.length;
         }
@@ -910,12 +915,12 @@ class Ghost {
       if (dist <= length) { // touching player
         if (this.state === "frightened") {
          this.eaten()
+        } else if (this.state !== "dead") { // gameover
+          print("TOUCH")
+          gameEnd = true;
         }
-        //gameStart =false
       }
 
-      print(this.x, this.dir, this.nextPointIndex, this.currentPointIndex, this.moveX, indexDif)
-     
        // change direction when at the middle of current grid
       if (this.nextPointIndex === thisCenterIndex) {
         if (this.dir !== this.queueDir) { // forces ghost to turn slower than the player by temporarily stopping movement
@@ -934,19 +939,16 @@ class Ghost {
           this.waiting = false;
         }
       }
-
-      //print(this.queueDir, thisCenterIndex, this.nextPointIndex, this.currentPointIndex, this.moveX, this.x, this.y, this.row, this.column)
-      //print(xDif, yDif)
     }
 
     // state handler
     let chaseDif = (frameCount - this.lastChaseTime) / fps
     let scatterDif = (frameCount - this.lastScatterTime) / fps
 
+    
     if (this.state !== "idle" && this.state !== "leaveIdle" && this.state !== "dead") {
       if (player.energized) { // enter frightened mode when player eats energizer
         if (this.state !== "frightened" && player.scareGhost) {
-          print(this.code, this.state)
           this.lastState = this.state
           this.changeState("frightened")
         } 
@@ -956,10 +958,9 @@ class Ghost {
         if ((scatterDif > scatterDuration || this.scatterNumber >= maxScatterNumber) && this.state === "scatter") { // enter chase mode if scatter duration is over or if limit exceeds
           this.changeState("chase")
         } else if (chaseDif > chaseDuration && this.state === "chase" && this.scatterNumber < maxScatterNumber) { // enter scatter mode if chase duration is over (imited amount of times)
+          print(this.code, chaseDif, this.lastChaseTime)
           this.changeState("scatter")
-        } else {
-         // this.changeState("chase") // enter chase mode as last resort
-        } 
+        }
       } 
     }
   }
@@ -994,9 +995,176 @@ class Ghost {
 
   eaten() {
     gamePaused = true
-    gamePauseTime = 0.5 * fps;
+    gamePauseTime = 0.8  * fps;
+
     this.changeState("dead")
-    popUps.push(["200", this.x, this.y + length / 2])
+    eatGhostSound.play()
+   
+    textAlign(CENTER)
+    popUps.push([ghostBonusScore, this.x, this.y + length / 2])
+
+    score += ghostBonusScore
+    ghostBonusScore += ghostScore
+  }
+}
+
+function init() { 
+  highscore = getItem("highscore") || 0
+  score = 0;
+  dotsEaten = 0;
+  winScreenIndex = 0;
+
+  // grids set up
+  for (let x = 0; x < columnNum; x++) {
+    for (let y = 0; y < rowNum; y++) {
+      let row = grids[y] || [];
+      let column = [x * length, y * length]
+
+      row[x] = column
+      grids[y] = row
+    }
+  }
+
+  // path set up
+  for (let x = 0; x < columnNum; x++) {
+  for (let y = 0; y < rowNum; y++) {
+    let row = paths[y] || [];
+    let xPoints = []
+    let yPoints = []
+    let centerX = x * length + length / 2
+    let centerY = y * length + length / 2
+
+    for (let i = x * length; i < centerX + length / 2; i++) {
+      xPoints.push([i, centerY])
+    }
+
+    for (let i = y * length; i < centerY + length / 2; i++) {
+      yPoints.push([centerX, i])
+    }
+
+    // grid type
+    let type = layout[y][x]
+
+    row[x] = [xPoints, yPoints, type, false, 0] // meta data for each grid
+    paths[y] = row
+
+    if (type === "0" || type === "O") {
+      totalDots += 1;
+    }
+  }
+}
+
+ // print(grids, paths)
+  player = new Pac(pacStartRow, pacStartColumn);
+  redGhost = new Ghost(0)
+  pinkGhost = new Ghost(1)
+  blueGhost = new Ghost(2)
+  yellowGhost = new Ghost(3)
+}
+
+function gameState() {
+  textSize(length / 2 - 1);
+  textAlign(CENTER)
+  strokeWeight(0);
+
+  if (gameWon) {
+    if (gamePauseTime === 1) { // restart game a frame before the count down is over
+      gameEnd = false;
+      gameStart = false;
+      gamePreparing = false;
+      intro = false;
+      init()
+      return
+    }
+
+    if (gamePauseTime < 2 * fps && gamePauseTime > 0) { // win screen
+      winScreenIndex += 0.125
+      fill(0)
+      rect(13 * length, 12 * length, 2 * length, length)
+    }
+
+    player.show()
+
+    if (!gamePaused) {
+      gamePauseTime = 3 * fps
+      gamePaused = true
+
+      if (score > highscore) { // store data
+        storeItem("highscore", score)
+      }
+    }
+  } else if (gameEnd) {
+    if (gamePauseTime === 2 * fps) {
+      if (!deathSound.isPlaying()) {
+        deathSound.play()
+      }
+
+      player.playDeathAnim = true;
+    } else if (gamePauseTime === 1) { // restart game a frame before the count down is over
+      gameEnd = false;
+      gameStart = false;
+      intro = false;
+      init()
+      return
+    }
+
+    player.show()
+
+    if (!gamePaused) {
+      gamePauseTime = 3 * fps
+      gamePaused = true
+
+      if (score > highscore) {
+        storeItem("highscore", score)
+      }
+    }
+  } else if (gamePreparing) { // waiting for music to stop
+    if(!intro){
+      introMusic.play();
+      intro = true;
+    } else {
+      if (!introMusic.isPlaying()) {
+        gameStart = true
+      } else {
+      textSize(length * 0.75);
+      text("READY!", length * columnNum / 2, length * rowNum /2 + 2.25 * length);
+      }
+    }
+  } else if (!gameStart) { // if neither game start or game end
+    text("PRESS SPACE TO START!", length * columnNum / 2, length * rowNum /2 + 2.25 * length);
+  }
+}
+
+function soundHandler() {
+  if (gamePaused || !gameStart) {
+    eatDotSound.stop()
+    ghostSiren.pause()
+    ghostSiren.stop()
+    intermissionMusic.pause()
+  } else {
+    ghostSiren.setVolume(0.05)
+
+    if (!ghostSiren.isPlaying()) {
+      ghostSiren.play()
+    }
+   
+    if (frameCount - player.lastEatenDot < 10) {
+      if (!eatDotSound.isPlaying()) {
+        eatDotSound.play()
+        //eatDotSound.loop()
+      }
+    } else {
+      eatDotSound.stop()
+    }
+
+    if (player.energized) {
+      if (!intermissionMusic.isPlaying()) {
+        intermissionMusic.play()
+      }
+      
+    } else {
+      intermissionMusic.stop()
+    }
   }
 }
 
@@ -1007,19 +1175,21 @@ function draw() {
   drawMap()
   debug()
 
-  let winCondition = dotsEaten === totalDots
+  gameWon = dotsEaten === totalDots
 
   if (gamePaused) {
     gamePauseTime -= 1;
 
+    // show score pop ups when game is "paused"
     for (i = 0; i < popUps.length; i++) {
       let popUp = popUps[i]
       
       fill(0, 255, 255)
-      textSize(length * 0.75)
+      textSize(length * 0.5)
       text(popUp[0], popUp[1], popUp[2])
     }
 
+    // clear all pop ups once game is unpaused
     if (gamePauseTime <= 0) {
       gamePaused = 0;
 
@@ -1038,21 +1208,23 @@ function draw() {
       redGhost.move()
       pinkGhost.move()
       yellowGhost.move()
-      if(intro===false){
-        introMusic.play();
-        intro = true;
-      }
     }
-      else if (!gameStart && !gameEnd) {
-          textSize(length / 2 - 1);
-          strokeWeight(0);
-          text("PRESS SPACE TO START!", length * columnNum / 2, length * rowNum /2 + 2.25 * length);
-      }
-      // else if(gameStart===false&&gameEnd===true){
-  
-      // }
-    
   }
+
+  soundHandler()
+  gameState()
+
+  fill(255)
+  textSize(length);
+  strokeWeight(0);
+
+  textAlign(CENTER)
+  text("HIGH SCORE", length * columnNum / 2, length * -2);
+  text(highscore, length * columnNum / 2, length * -0.5);
+
+  textAlign(LEFT)
+  text("1UP", 0, length * -2);
+  text(score, 0, length * -0.5);
 }
 
 
@@ -1066,14 +1238,14 @@ function keyPressed() {
   } else if (key === "d" || keyCode === RIGHT_ARROW) {
     player.dir = "right"
   } else if (key === " ") {
-    gameStart = !gameStart;
+    gamePreparing = true;
   } else if (key === "y") { // debug key
-    player.move()
-    redGhost.move()
-    redGhost.show()
+    //player.move()
+   // redGhost.move()
+   // redGhost.show()
   }
 }
 
 function mouseClicked() {
-  paths[debugRow][debugColumn][2] = true; // adds a 'blocked' property to the grid for debugging
+  //paths[debugRow][debugColumn][2] = true; // adds a 'blocked' property to the grid for debugging
 }
