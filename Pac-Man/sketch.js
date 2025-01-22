@@ -23,19 +23,18 @@ let ghostFrightenedSpeed = 2;
 let ghostWarpZoneSpeed = 2;
 let ghostDeadSpeed = 6;
 
-let chaseDuration = .20;
-let energizedDuration = 5;
-let scatterDuration = 7777;
+let chaseDuration = 20;
+let energizedDuration = 6;
+let scatterDuration = 7;
 let maxScatterNumber = 4;
 
 let canvasX = 950;
 let canvasY;
 
 let eatDotSound;
-let eatFruitSound;
 let deathSound;
 let eatGhostSound;
-let intermissionMusic
+let intermissionMusic;
 let ghostSiren;
 let introMusic;
 
@@ -931,7 +930,7 @@ class Ghost {
     let chaseDif = (frameCount - this.lastChaseTime) / fps;
     let scatterDif = (frameCount - this.lastScatterTime) / fps;
     
-    if (this.state !== "idle" && this.state !== "leaveIdle" && this.state !== "dead") {
+    if (this.state !== "idle" && this.state !== "leaveIdle" && this.state !== "enterIdle" && this.state !== "dead") {
       if (player.energized) { // enter frightened mode when player eats energizer
         if (this.state !== "frightened" && player.scareGhost) {
           this.lastState = this.state;
@@ -994,7 +993,17 @@ function init() {
   highscore = getItem("highscore") || 0;
   score = 0;
   dotsEaten = 0;
+  totalDots = 0;
   winScreenIndex = 0;
+  ghostBonusScore = ghostScore;
+
+  eatDotSound.stop();
+  deathSound.stop();
+  eatGhostSound.stop();
+  intermissionMusic.stop();
+  ghostSiren.stop();
+  introMusic.stop();
+
 
   // grids set up
   for (let x = 0; x < columnNum; x++) {
@@ -1208,7 +1217,6 @@ function draw() {
   text(score, 0, length * -0.5);
 }
 
-
 function keyPressed() {
   if (key === "w" || keyCode === UP_ARROW) {
     player.dir = "up";
@@ -1219,14 +1227,11 @@ function keyPressed() {
   } else if (key === "d" || keyCode === RIGHT_ARROW) {
     player.dir = "right";
   } else if (key === " ") {
-    gamePreparing = true;
-  } else if (key === "y") { // debug key
-    //player.move()
-   // redGhost.move()
-   // redGhost.show()
+    gamePreparing = true; 
   }
 }
 
 function mouseClicked() {
-  //paths[debugRow][debugColumn][2] = true; // adds a 'blocked' property to the grid for debugging
+  // makes a grid "blocked" for debugging
+  //paths[debugRow][debugColumn][2] = true;
 }
